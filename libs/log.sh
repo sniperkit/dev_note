@@ -1,5 +1,3 @@
-
-
 FONT_BOLD='\e[1m'
 FONT_NORMAL='\e[0m'
 FONT_RED='\e[31m'

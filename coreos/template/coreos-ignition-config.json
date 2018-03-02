@@ -21,5 +21,17 @@
     ]
   },
   "storage": {},
-  "systemd": {}
+  "systemd": {
+    "units": [
+      {
+        "dropins": [
+          {
+            "contents": "[Service]\nEnvironment=\"ETCD_NAME=infra0\"",
+            "name": "conf1.conf"
+          }
+        ],
+        "name": "etcd-member.service"
+      }
+    ]
+  }
 }

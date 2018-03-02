@@ -1,0 +1,24 @@
+{
+  "ignition": {
+    "config": {},
+    "timeouts": {},
+    "version": "2.1.0"
+  },
+  "networkd": {},
+  "passwd": {
+      {
+        "groups": [
+          "sudo",
+          "docker"
+        ],
+        "name": "admin",
+        "passwordHash": "<hash>",
+        "sshAuthorizedKeys": [
+          "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGdByTgSVHq......."
+        ]
+      }
+    ]
+  },
+  "storage": {},
+  "systemd": {}
+}

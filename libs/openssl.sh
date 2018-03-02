@@ -1,7 +1,5 @@
 . ./cmd.sh
 
-sudo openssl passwd -1 > cloud-config-file
-
 function hash_password() {
   local f_out=${1:-}
 

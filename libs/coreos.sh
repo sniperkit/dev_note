@@ -1,6 +1,6 @@
 . ./cmd.sh
 
-sudo coreos-install -d /dev/sda -C stable -i cloud-config-file
+COREOS_INIT_CONF=""
 
 function install_coreos() {
   local _conf=$1

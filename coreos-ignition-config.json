@@ -6,15 +6,16 @@
   },
   "networkd": {},
   "passwd": {
+    "users": [
       {
         "groups": [
           "sudo",
           "docker"
         ],
         "name": "admin",
-        "passwordHash": "<hash>",
+        "passwordHash": "$6$43y3tkl...",
         "sshAuthorizedKeys": [
-          "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGdByTgSVHq......."
+          "key1"
         ]
       }
     ]

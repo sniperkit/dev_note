@@ -173,15 +173,6 @@ function get_or_update_repo() {
   fi
 }
 
-# ==== YUM ==== #
-function yum_install() {
-  local pkg=$1
-
-  yum install $pkg && \
-  log "$pkg ... ${FONT_GREEN}ok${FONT_NORMAL}" "[YUM][install]" || \
-  log "$pkg ... ${FONT_RED}failed${FONT_NORMAL}" "[YUM][install]"
-}
-
 
 # ==== PYTHON ==== #
 function is_python() {

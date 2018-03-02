@@ -11,4 +11,6 @@ function install_coreos() {
 
   [[ ${_extension} == 'yaml' ]] && \
   run_and_validate_cmd "sudo coreos-install -d /dev/sda -C stable -c ${_conf}"
+
+  # journalctl -t ignition
 }

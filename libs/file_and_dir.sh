@@ -44,20 +44,23 @@ function copy_file_or_dir() {
 }
 
 function set_ownership() {
-  local user=$1
-  local group=$2
-  local path=$3
+  local _user=$1
+  local _group=$2
+  local _path=$3
+  local _sudo=${4:-}
 
-  chown -R ${user}:${group} ${path} && \
-  log "set ${user}:${group} ${path} ... ${FONT_GREEN}ok${FONT_NORMAL}" "[OWNERSHIP]" || \
-  log "set ... ${FONT_RED}failed${FONT_NORMAL}" "[OWNERSHIP]"
+#  chown -R ${user}:${group} ${path} && \
+#  log "set ${user}:${group} ${path} ... ${FONT_GREEN}ok${FONT_NORMAL}" "[OWNERSHIP]" || \
+#  log "set ... ${FONT_RED}failed${FONT_NORMAL}" "[OWNERSHIP]"
+  run_and_validate_cmd "${_sudo} chown -R ${_user}:${_group} ${_path}"
 }
 
 function set_permission() {
   local _permission=$1
   local _path=$2
+  local _sudo=${3:-}
 
-  run_and_validate_cmd "chmod ${_permission} ${_path}"
+  run_and_validate_cmd "${_sudo} chmod ${_permission} ${_path}"
 }
 
 function overwrite_content() {

@@ -3,7 +3,7 @@
 . ./file_and_dir.sh
 . ./sed.sh
 
-TMP_DIR="~"
+TMP_DIR=`eval echo ~$USER`
 K8S_ROOT="/etc/kubernetes"
 
 K8S_TMP_KEY_DIR="${TMP_DIR}/kube-ssl"
@@ -33,8 +33,8 @@ K8S_SCHEDULER_MANIFEST="/etc/kubernetes/manifests/kube-scheduler.yaml"
 function create_root_keys() {
   local _key=${1:-$K8S_ROOT_KEY}
 
-  openssl genrsa -out ${_key}-key.pem 2048
-  openssl req -x509 -new -nodes -key ${_key}-key.pem -days 10000 -out ${_key}.pem -subj "/CN=kube-ca"
+  sudo openssl genrsa -out ${_key}-key.pem 2048
+  sudo openssl req -x509 -new -nodes -key ${_key}-key.pem -days 10000 -out ${_key}.pem -subj "/CN=kube-ca"
 }
 
 function create_api_server_keys() {
@@ -64,9 +64,9 @@ EOF
   overwrite_content "${_content}" "${_key_conf}"
   replace_word_in_file "<__MASTER_PUBLIC_IP__>" "${_master}" "${_key_conf}"
 
-  openssl genrsa -out ${_apikey}-key.pem 2048
-  openssl req -new -key ${_apikey}-key.pem -out ${_apikey}.csr -subj "/CN=kube-apiserver" -config ${_key_conf}
-  openssl x509 -req -in ${_apikey}.csr -CA ${_rootkey}.pem -CAkey ${_rootkey}-key.pem -CAcreateserial -out ${_apikey}.pem -days 365 -extensions v3_req -extfile ${_key_conf}
+  sudo openssl genrsa -out ${_apikey}-key.pem 2048
+  sudo openssl req -new -key ${_apikey}-key.pem -out ${_apikey}.csr -subj "/CN=kube-apiserver" -config ${_key_conf}
+  sudo openssl x509 -req -in ${_apikey}.csr -CA ${_rootkey}.pem -CAkey ${_rootkey}-key.pem -CAcreateserial -out ${_apikey}.pem -days 365 -extensions v3_req -extfile ${_key_conf}
 }
 
 function create_worker_keys() {
@@ -104,18 +104,20 @@ EOF
 function setup_tls_assets() {
   local _master=$1
   local _tls_tmp_dir=${2:-$K8S_TMP_KEY_DIR}
-  local _tls_dir=${2:-$K8S_TMP_KEY_DIR}
+  local _tls_dir=${2:-$K8S_KEY_DIR}
 
   create_dir "$_tls_tmp_dir"
+  create_dir "$_tls_dir"
+
   pushd ${_tls_tmp_dir}
 
   create_root_keys
   create_api_server_keys ${_master}
 #  create_worker_keys ${_worker}
 
-  cp ${_tls_tmp_dir}/*.pem ${_tls_dir}/
-  set_permission "600" "${_tls_dir}/*-key.pem"
-  set_ownership "root" "root" "${_tls_dir}/*-key.pem"
+  sudo cp ${_tls_tmp_dir}/*.pem ${_tls_dir}/
+  set_permission "600" "${_tls_dir}/*-key.pem" "sudo"
+  set_ownership "root" "root" "${_tls_dir}/*-key.pem" "sudo"
   popd
 }
 

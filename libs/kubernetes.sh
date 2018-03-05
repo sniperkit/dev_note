@@ -1,13 +1,344 @@
+#!/usr/bin/env bash
 . ./cmd.sh
 . ./file_and_dir.sh
+. ./sed.sh
 
 K8SCTL="kubectl"
 K8SCTL_DOWNLOAD="https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/${K8SCTL}"
+K8SCTL_RUN="/opt/bin/${K8SCTL}"
+
+KUBELET_UNIT="kubelet.service"
+KUBELET_RUN="/etc/systemd/system/${KUBELET_UNIT}"
+
+K8SAPI_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
+K8SPOD_MANIFEST="/etc/kubernetes/manifests/kubernetes.yaml"
+
+K8S_PROXY="/etc/kubernetes/manifests/kube-proxy.yaml"
+
+K8S_CONTROLLER="/etc/kubernetes/manifests/kube-controller-manager.yaml"
+
+K8S_SCHEDULER="/etc/kubernetes/manifests/kube-scheduler.yaml"
 
 function setup_k8scli() {
   local _download=${1:-$K8SCTL_DOWNLOAD}
 
-  run_and_validate_cmd "curl -O ${_download}"
-  run_and_validate_cmd "chmod -x ${K8SCTL}"
-  run_and_validate_cmd "sudo mv ${K8SCTL} /usr/local/bin/${K8SCTL}"
+  pushd ~
+  run_and_validate_cmd "curl ${_download} -o ${K8SCTL}"
+  run_and_validate_cmd "sudo chmod +x ${K8SCTL}"
+  run_and_validate_cmd "sudo mkdir -p `dirname ${K8SCTL_RUN}`"
+  run_and_validate_cmd "sudo mv ${K8SCTL} ${K8SCTL_RUN}"
+  popd
+}
+
+function setup_kubelet_service() {
+  local _master_ip=$1
+  local _service=${2:-$KUBELET_RUN}
+  local _service_file=`basename ${_service}`
+  local _content=`cat << 'EOF'
+[Service]
+Environment=KUBELET_VERSION=v1.3.5_coreos.0
+ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStart=/usr/lib/coreos/kubelet-wrapper \\\
+
+  --api-servers=http://127.0.0.1:8080 \\\
+
+  --allow-privileged=true \\\
+
+  --config=/etc/kubernetes/manifests \\\
+
+  --hostname-override=<__master_ip__> \\\
+
+  --cluster-dns=10.13.0.10 \\\
+
+  --cluster-domain=cluster.local
+Restart=always
+RestartSec=10
+[Install]
+WantedBy=multi-user.target
+EOF
+`
+
+  pushd ~
+  overwrite_content "${_content}" "${_service_file}"
+  replace_word_in_file "<__master_ip__>" "${_master_ip}" "${_service_file}"
+  run_and_validate_cmd "sudo mv -f ${_service_file} /etc/systemd/system/"
+  popd
+}
+
+function create_k8sapi_manifest() {
+  local _master_ip=$1
+  local _manifest=${2:-$K8SAPI_MANIFEST}
+  local _manifest_file=`basename ${_manifest}`
+
+  local _content=`cat << EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  containers:
+  - name: kube-apiserver
+    image: quay.io/coreos/hyperkube:v1.3.5_coreos.0
+    command:
+    - /hyperkube
+    - apiserver
+    - --bind-address=0.0.0.0
+    - --etcd-servers=http://<__master_ip__>:2379
+    - --allow-privileged=true
+    - --service-cluster-ip-range=10.13.0.0/24
+    - --secure-port=443
+    - --advertise-address=<__master_ip__>
+    - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota
+    - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
+    - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
+    - --client-ca-file=/etc/kubernetes/ssl/ca.pem
+    - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
+    - --runtime-config=extensions/v1beta1=true,extensions/v1beta1/networkpolicies=true
+    ports:
+    - containerPort: 443
+      hostPort: 443
+      name: https
+    - containerPort: 8080
+      hostPort: 8080
+      name: local
+    volumeMounts:
+    - mountPath: /etc/kubernetes/ssl
+      name: ssl-certs-kubernetes
+      readOnly: true
+    - mountPath: /etc/ssl/certs
+      name: ssl-certs-host
+      readOnly: true
+  volumes:
+  - hostPath:
+      path: /etc/kubernetes/ssl
+    name: ssl-certs-kubernetes
+  - hostPath:
+      path: /usr/share/ca-certificates
+    name: ssl-certs-host
+EOF`
+
+  pushd ~
+  overwrite_content "${_content}" "${_manifest_file}"
+  replace_word_in_file "<__master_ip__>" "${_master_ip}" "${_manifest_file}"
+  run_and_validate_cmd "sudo mv -f ${_manifest_file} ${_manifest}"
+  popd
+}
+
+function create_k8spod_manifest() {
+  local _manifest=${1:-$K8SPOD_MANIFEST}
+  local _manifest_file=`basename ${_manifest}`
+
+  local _content=`cat << EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-controller
+spec:
+  hostNetwork: true
+  volumes:
+    - name: "etc-kubernetes"
+      hostPath:
+        path: "/etc/kubernetes"
+    - name: "ssl-certs"
+      hostPath:
+        path: "/usr/share/ca-certificates"
+    - name: "var-run-kubernetes"
+      hostPath:
+        path: "/var/run/kubernetes"
+    - name: "etcd-datadir"
+      hostPath:
+        path: "/var/lib/etcd"
+    - name: "usr"
+      hostPath:
+        path: "/usr"
+    - name: "lib64"
+      hostPath:
+        path: "/lib64"
+  containers:
+    - name: "etcd"
+      image: "b.gcr.io/kuar/etcd:2.1.1"
+      args:
+        - "--data-dir=/var/lib/etcd"
+        - "--advertise-client-urls=http://127.0.0.1:2379"
+        - "--listen-client-urls=http://127.0.0.1:2379"
+        - "--listen-peer-urls=http://127.0.0.1:2380"
+        - "--name=etcd"
+      volumeMounts:
+        - mountPath: /var/lib/etcd
+          name: "etcd-datadir"
+    - name: "kube-apiserver"
+      image: "b.gcr.io/kuar/kube-apiserver:1.0.3"
+      args:
+        - "--allow-privileged=true"
+        - "--etcd-servers=http://127.0.0.1:2379"
+        - "--insecure-bind-address=0.0.0.0"
+        - "--service-cluster-ip-range=10.200.20.0/24"
+        - "--v=2"
+      volumeMounts:
+        - mountPath: /etc/kubernetes
+          name: "etc-kubernetes"
+        - mountPath: /var/run/kubernetes
+          name: "var-run-kubernetes"
+    - name: "kube-controller-manager"
+      image: "b.gcr.io/kuar/kube-controller-manager:1.0.3"
+      args:
+        - "--master=http://127.0.0.1:8080"
+        - "--v=2"
+    - name: "kube-scheduler"
+      image: "b.gcr.io/kuar/kube-scheduler:1.0.3"
+      args:
+        - "--master=http://127.0.0.1:8080"
+        - "--v=2"
+    - name: "kube-proxy"
+      image: "b.gcr.io/kuar/kube-proxy:1.0.3"
+      args:
+        - "--master=http://127.0.0.1:8080"
+        - "--v=2"
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - mountPath: /etc/kubernetes
+          name: "etc-kubernetes"
+        - mountPath: /etc/ssl/certs
+          name: "ssl-certs"
+        - mountPath: /usr
+          name: "usr"
+        - mountPath: /lib64
+          name: "lib64"
+EOF`
+
+  pushd ~
+  overwrite_content "${_content}" "${_manifest_file}"
+#  replace_word_in_file "<__master_ip__>" "${_master_ip}" "${_manifest_file}"
+  run_and_validate_cmd "sudo mv -f ${_manifest_file} ${_manifest}"
+  popd
+}
+
+function create_k8s_proxy() {
+  local _proxy=${1:-$K8S_PROXY}
+  local _proxy_file=`basename ${_proxy}`
+
+  local _content=`cat << EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  containers:
+  - name: kube-proxy
+    image: quay.io/coreos/hyperkube:v1.3.5_coreos.0
+    command:
+    - /hyperkube
+    - proxy
+    - --master=http://127.0.0.1:8080
+    - --proxy-mode=iptables
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /etc/ssl/certs
+      name: ssl-certs-host
+      readOnly: true
+  volumes:
+  - hostPath:
+      path: /usr/share/ca-certificates
+    name: ssl-certs-host
+EOF`
+
+  pushd ~
+  overwrite_content "${_content}" "${_proxy_file}"
+#  replace_word_in_file "<__master_ip__>" "${_master_ip}" "${_proxy_file}"
+  run_and_validate_cmd "sudo mv -f ${_proxy_file} ${_proxy}"
+  popd
+}
+
+function create_k8s_controller() {
+  local _controller=${1:-$K8S_PROXY}
+  local _controller_file=`basename ${_controller}`
+
+  local _content=`cat << EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-controller-manager
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  containers:
+  - name: kube-controller-manager
+    image: quay.io/coreos/hyperkube:v1.3.5_coreos.0
+    command:
+    - /hyperkube
+    - controller-manager
+    - --master=http://127.0.0.1:8080
+    - --leader-elect=true
+    - --service-account-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
+    - --root-ca-file=/etc/kubernetes/ssl/ca.pem
+    livenessProbe:
+      httpGet:
+        host: 127.0.0.1
+        path: /healthz
+        port: 10252
+      initialDelaySeconds: 15
+      timeoutSeconds: 1
+    volumeMounts:
+    - mountPath: /etc/kubernetes/ssl
+      name: ssl-certs-kubernetes
+      readOnly: true
+    - mountPath: /etc/ssl/certs
+      name: ssl-certs-host
+      readOnly: true
+  volumes:
+  - hostPath:
+      path: /etc/kubernetes/ssl
+    name: ssl-certs-kubernetes
+  - hostPath:
+      path: /usr/share/ca-certificates
+    name: ssl-certs-host
+EOF`
+
+  pushd ~
+  overwrite_content "${_content}" "${_controller_file}"
+#  replace_word_in_file "<__master_ip__>" "${_master_ip}" "${_controller_file}"
+  run_and_validate_cmd "sudo mv -f ${_controller_file} ${_controller}"
+  popd
+}
+
+function create_k8s_scheduler() {
+  local _scheduler=${1:-$K8S_PROXY}
+  local _scheduler_file=`basename ${_scheduler}`
+
+  local _content=`cat << EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-scheduler
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  containers:
+  - name: kube-scheduler
+    image: quay.io/coreos/hyperkube:v1.3.5_coreos.0
+    command:
+    - /hyperkube
+    - scheduler
+    - --master=http://127.0.0.1:8080
+    - --leader-elect=true
+    livenessProbe:
+      httpGet:
+        host: 127.0.0.1
+        path: /healthz
+        port: 10251
+      initialDelaySeconds: 15
+      timeoutSeconds: 1
+EOF`
+
+  pushd ~
+  overwrite_content "${_content}" "${_scheduler_file}"
+#  replace_word_in_file "<__master_ip__>" "${_master_ip}" "${_scheduler_file}"
+  run_and_validate_cmd "sudo mv -f ${_scheduler_file} ${_scheduler}"
+  popd
 }

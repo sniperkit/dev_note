@@ -63,12 +63,12 @@ function set_permission() {
 function overwrite_content() {
   local _content="$1"
   local _filepath=$2
-  local _cmd="echo ${_content} > ${_filepath}"
+#  local _cmd="echo \"${_content}\" > ${_filepath}"
 
-  run_and_validate_cmd "${_cmd}"
-#  echo "${content}" > ${filepath} && \
-#  log "${_filepath} ... ${FONT_GREEN}ok${FONT_NORMAL}" "[FILE][update]" || \
-#  log "${_filepath} ... ${FONT_RED}failed${FONT_NORMAL}" "[FILE][update]"
+#  run_and_validate_cmd "${_cmd}"
+  echo "${_content}" > ${_filepath} && \
+  log "${_filepath} ... ${FONT_GREEN}ok${FONT_NORMAL}" "[FILE][update]" || \
+  log "${_filepath} ... ${FONT_RED}failed${FONT_NORMAL}" "[FILE][update]"
 }
 
 function append_content() {

@@ -10,14 +10,11 @@ K8SCTL_RUN="/opt/bin/${K8SCTL}"
 KUBELET_UNIT="kubelet.service"
 KUBELET_RUN="/etc/systemd/system/${KUBELET_UNIT}"
 
-K8SAPI_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
-K8SPOD_MANIFEST="/etc/kubernetes/manifests/kubernetes.yaml"
-
-K8S_PROXY="/etc/kubernetes/manifests/kube-proxy.yaml"
-
-K8S_CONTROLLER="/etc/kubernetes/manifests/kube-controller-manager.yaml"
-
-K8S_SCHEDULER="/etc/kubernetes/manifests/kube-scheduler.yaml"
+K8S_API_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
+K8S_POD_MANIFEST="/etc/kubernetes/manifests/kubernetes.yaml"
+K8S_PROXY_MANIFEST="/etc/kubernetes/manifests/kube-proxy.yaml"
+K8S_CONTROLLER_MANIFEST="/etc/kubernetes/manifests/kube-controller-manager.yaml"
+K8S_SCHEDULER_MANIFEST="/etc/kubernetes/manifests/kube-scheduler.yaml"
 
 function setup_k8scli() {
   local _download=${1:-$K8SCTL_DOWNLOAD}
@@ -41,6 +38,8 @@ ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStart=/usr/lib/coreos/kubelet-wrapper \\\
 
   --api-servers=http://127.0.0.1:8080 \\\
+
+  --register-schedulable=false \\\
 
   --allow-privileged=true \\\
 
@@ -67,7 +66,7 @@ EOF
 
 function create_k8sapi_manifest() {
   local _master_ip=$1
-  local _manifest=${2:-$K8SAPI_MANIFEST}
+  local _manifest=${2:-$K8S_API_MANIFEST}
   local _manifest_file=`basename ${_manifest}`
 
   local _content=`cat << EOF
@@ -127,7 +126,7 @@ EOF`
 }
 
 function create_k8spod_manifest() {
-  local _manifest=${1:-$K8SPOD_MANIFEST}
+  local _manifest=${1:-$K8S_POD_MANIFEST}
   local _manifest_file=`basename ${_manifest}`
 
   local _content=`cat << EOF
@@ -217,7 +216,7 @@ EOF`
 }
 
 function create_k8s_proxy() {
-  local _proxy=${1:-$K8S_PROXY}
+  local _proxy=${1:-$K8S_PROXY_MANIFEST}
   local _proxy_file=`basename ${_proxy}`
 
   local _content=`cat << EOF
@@ -256,7 +255,7 @@ EOF`
 }
 
 function create_k8s_controller() {
-  local _controller=${1:-$K8S_PROXY}
+  local _controller=${1:-$K8S_CONTROLLER_MANIFEST}
   local _controller_file=`basename ${_controller}`
 
   local _content=`cat << EOF
@@ -308,7 +307,7 @@ EOF`
 }
 
 function create_k8s_scheduler() {
-  local _scheduler=${1:-$K8S_PROXY}
+  local _scheduler=${1:-$K8S_SCHEDULER_MANIFEST}
   local _scheduler_file=`basename ${_scheduler}`
 
   local _content=`cat << EOF

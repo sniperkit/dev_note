@@ -3,6 +3,20 @@
 . ./file_and_dir.sh
 . ./sed.sh
 
+TMP_DIR="~"
+K8S_ROOT="/etc/kubernetes"
+
+K8S_TMP_KEY_DIR="${TMP_DIR}/kube-ssl"
+K8S_KEY_DIR="${K8S_ROOT}/ssl"
+
+K8S_ROOT_KEY="ca"
+
+K8S_API_KEY_CONF="openssl.cnf"
+K8S_API_KEY="apiserver"
+
+K8S_WORKER_KEY_CONF="worker-openssl.cnf"
+#K8S_WORKER_KEY="<__FQDN__>"
+
 K8SCTL="kubectl"
 K8SCTL_DOWNLOAD="https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/${K8SCTL}"
 K8SCTL_RUN="/opt/bin/${K8SCTL}"
@@ -15,6 +29,95 @@ K8S_POD_MANIFEST="/etc/kubernetes/manifests/kubernetes.yaml"
 K8S_PROXY_MANIFEST="/etc/kubernetes/manifests/kube-proxy.yaml"
 K8S_CONTROLLER_MANIFEST="/etc/kubernetes/manifests/kube-controller-manager.yaml"
 K8S_SCHEDULER_MANIFEST="/etc/kubernetes/manifests/kube-scheduler.yaml"
+
+function create_root_keys() {
+  local _key=${1:-$K8S_ROOT_KEY}
+
+  openssl genrsa -out ${_key}-key.pem 2048
+  openssl req -x509 -new -nodes -key ${_key}-key.pem -days 10000 -out ${_key}.pem -subj "/CN=kube-ca"
+}
+
+function create_api_server_keys() {
+  local _master=$1 #ip
+  local _key_conf=${2:-$K8S_API_KEY_CONF}
+  local _apikey=${3:-$K8S_API_KEY}
+  local _rootkey=${4:-$K8S_ROOT_KEY}
+  local _content=`cat << 'EOF'
+[req]
+req_extensions = v3_req
+distinguished_name = req_distinguished_name
+[req_distinguished_name]
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = kubernetes
+DNS.2 = kubernetes.default
+DNS.3 = kubernetes.default.svc
+DNS.4 = kubernetes.default.svc.cluster.local
+IP.1 = 10.13.0.1
+IP.2 = <__MASTER_PUBLIC_IP__>
+EOF
+`
+
+  overwrite_content "${_content}" "${_key_conf}"
+  replace_word_in_file "<__MASTER_PUBLIC_IP__>" "${_master}" "${_key_conf}"
+
+  openssl genrsa -out ${_apikey}-key.pem 2048
+  openssl req -new -key ${_apikey}-key.pem -out ${_apikey}.csr -subj "/CN=kube-apiserver" -config ${_key_conf}
+  openssl x509 -req -in ${_apikey}.csr -CA ${_rootkey}.pem -CAkey ${_rootkey}-key.pem -CAcreateserial -out ${_apikey}.pem -days 365 -extensions v3_req -extfile ${_key_conf}
+}
+
+function create_worker_keys() {
+  local _worker_ip=$1 #ip
+  local _worker_fqdn=${2:-$_worker_ip}
+  local _key_conf=${3:-$K8S_WORKER_KEY_CONF}
+#  local _apikey=${3:-$K8S_API_KEY}
+  local _rootkey=${4:-$K8S_ROOT_KEY}
+  local _content=`cat << 'EOF'
+[req]
+req_extensions = v3_req
+distinguished_name = req_distinguished_name
+[req_distinguished_name]
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+subjectAltName = @alt_names
+[alt_names]
+IP.1 = $ENV::WORKER_IP
+EOF
+`
+
+  overwrite_content "${_content}" "${_key_conf}"
+#  replace_word_in_file "<__WORKER_IP__>" "${_worker_ip}" "${_key_conf}"
+
+  openssl genrsa -out ${_worker_fqdn}-worker-key.pem 2048
+
+  WORKER_IP=${_worker_ip} \
+  openssl req -new -key ${_worker_fqdn}-worker-key.pem -out ${_worker_fqdn}-worker.csr -subj "/CN=${_worker_fqdn}" -config ${_key_conf}
+
+  WORKER_IP=${_worker_ip} \
+  openssl x509 -req -in ${_worker_fqdn}-worker.csr -CA ${_rootkey}.pem -CAkey ${_rootkey}-key.pem -CAcreateserial -out ${_worker_fqdn}-worker.pem -days 365 -extensions v3_req -extfile ${_key_conf}
+}
+
+function setup_tls_assets() {
+  local _master=$1
+  local _tls_tmp_dir=${2:-$K8S_TMP_KEY_DIR}
+  local _tls_dir=${2:-$K8S_TMP_KEY_DIR}
+
+  create_dir "$_tls_tmp_dir"
+  pushd ${_tls_tmp_dir}
+
+  create_root_keys
+  create_api_server_keys ${_master}
+#  create_worker_keys ${_worker}
+
+  cp ${_tls_tmp_dir}/*.pem ${_tls_dir}/
+  set_permission "600" "${_tls_dir}/*-key.pem"
+  set_ownership "root" "root" "${_tls_dir}/*-key.pem"
+  popd
+}
 
 function setup_k8scli() {
   local _download=${1:-$K8SCTL_DOWNLOAD}
@@ -45,7 +148,7 @@ ExecStart=/usr/lib/coreos/kubelet-wrapper \\\
 
   --config=/etc/kubernetes/manifests \\\
 
-  --hostname-override=<__master_ip__> \\\
+  --hostname-override=<__MASTER_IP__> \\\
 
   --cluster-dns=10.13.0.10 \\\
 
@@ -59,7 +162,7 @@ EOF
 
   pushd ~
   overwrite_content "${_content}" "${_service_file}"
-  replace_word_in_file "<__master_ip__>" "${_master_ip}" "${_service_file}"
+  replace_word_in_file "<__MASTER_IP__>" "${_master_ip}" "${_service_file}"
   run_and_validate_cmd "sudo mv -f ${_service_file} /etc/systemd/system/"
   popd
 }

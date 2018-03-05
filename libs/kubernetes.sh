@@ -4,6 +4,10 @@
 . ./sed.sh
 
 TMP_DIR=`eval echo ~$USER`
+
+K8S_VERSION="v1.5.4_coreos.0"
+K8S_DNS_SERVICE_IP="8.8.8.8"
+K8S_NETWORK_PLUGIN="cni"
 K8S_ROOT="/etc/kubernetes"
 
 K8S_TMP_KEY_DIR="${TMP_DIR}/kube-ssl"
@@ -17,21 +21,21 @@ K8S_API_KEY="apiserver"
 K8S_WORKER_KEY_CONF="worker-openssl.cnf"
 #K8S_WORKER_KEY="<__FQDN__>"
 
-K8SCTL="kubectl"
-K8SCTL_DOWNLOAD="https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/${K8SCTL}"
-K8SCTL_RUN="/opt/bin/${K8SCTL}"
+KUBECTL="kubectl"
+KUBECTL_DOWNLOAD="https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/${K8SCTL}"
+KUBECTL_RUN="/opt/bin/${K8SCTL}"
 
 KUBELET_UNIT="kubelet.service"
 KUBELET_RUN="/etc/systemd/system/${KUBELET_UNIT}"
 
-K8S_API_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
-K8S_POD_MANIFEST="/etc/kubernetes/manifests/kubernetes.yaml"
-K8S_PROXY_MANIFEST="/etc/kubernetes/manifests/kube-proxy.yaml"
-K8S_CONTROLLER_MANIFEST="/etc/kubernetes/manifests/kube-controller-manager.yaml"
-K8S_SCHEDULER_MANIFEST="/etc/kubernetes/manifests/kube-scheduler.yaml"
+KUBELET_API_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
+KUBELET_POD_MANIFEST="/etc/kubernetes/manifests/kubernetes.yaml"
+KUBELET_PROXY_MANIFEST="/etc/kubernetes/manifests/kube-proxy.yaml"
+KUBELET_CONTROLLER_MANIFEST="/etc/kubernetes/manifests/kube-controller-manager.yaml"
+KUBELET_SCHEDULER_MANIFEST="/etc/kubernetes/manifests/kube-scheduler.yaml"
 
 function create_root_keys() {
-  local _key=${1:-$K8S_ROOT_KEY}
+  local _key=${1:-$KUBELET_ROOT_KEY}
 
   sudo openssl genrsa -out ${_key}-key.pem 2048
   sudo openssl req -x509 -new -nodes -key ${_key}-key.pem -days 10000 -out ${_key}.pem -subj "/CN=kube-ca"
@@ -39,9 +43,9 @@ function create_root_keys() {
 
 function create_api_server_keys() {
   local _master=$1 #ip
-  local _key_conf=${2:-$K8S_API_KEY_CONF}
-  local _apikey=${3:-$K8S_API_KEY}
-  local _rootkey=${4:-$K8S_ROOT_KEY}
+  local _key_conf=${2:-$KUBELET_API_KEY_CONF}
+  local _apikey=${3:-$KUBELET_API_KEY}
+  local _rootkey=${4:-$KUBELET_ROOT_KEY}
   local _content=`cat << 'EOF'
 [req]
 req_extensions = v3_req
@@ -72,9 +76,9 @@ EOF
 function create_worker_keys() {
   local _worker_ip=$1 #ip
   local _worker_fqdn=${2:-$_worker_ip}
-  local _key_conf=${3:-$K8S_WORKER_KEY_CONF}
-#  local _apikey=${3:-$K8S_API_KEY}
-  local _rootkey=${4:-$K8S_ROOT_KEY}
+  local _key_conf=${3:-$KUBELET_WORKER_KEY_CONF}
+#  local _apikey=${3:-$KUBELET_API_KEY}
+  local _rootkey=${4:-$KUBELET_ROOT_KEY}
   local _content=`cat << 'EOF'
 [req]
 req_extensions = v3_req
@@ -103,8 +107,8 @@ EOF
 
 function setup_tls_assets() {
   local _master=$1
-  local _tls_tmp_dir=${2:-$K8S_TMP_KEY_DIR}
-  local _tls_dir=${2:-$K8S_KEY_DIR}
+  local _tls_tmp_dir=${2:-$KUBELET_TMP_KEY_DIR}
+  local _tls_dir=${2:-$KUBELET_KEY_DIR}
 
   create_dir "$_tls_tmp_dir"
   create_dir "$_tls_dir"
@@ -121,42 +125,59 @@ function setup_tls_assets() {
   popd
 }
 
-function setup_k8scli() {
-  local _download=${1:-$K8SCTL_DOWNLOAD}
-
-  pushd ~
-  run_and_validate_cmd "curl ${_download} -o ${K8SCTL}"
-  run_and_validate_cmd "sudo chmod +x ${K8SCTL}"
-  run_and_validate_cmd "sudo mkdir -p `dirname ${K8SCTL_RUN}`"
-  run_and_validate_cmd "sudo mv ${K8SCTL} ${K8SCTL_RUN}"
-  popd
+function setup_kubeadm() {
+#  the command to bootstrap the cluster.
+  :
 }
 
-function setup_kubelet_service() {
+function setup_kubecli() {
+#  the command line util to talk to your cluster.
+
+  local _download=${1:-$KUBECTL_DOWNLOAD}
+  local _master=${2:-127.0.0.1}
+
+  pushd ~
+  run_and_validate_cmd "curl ${_download} -o ${KUBECTL}"
+  run_and_validate_cmd "sudo chmod +x ${KUBECTL}"
+  run_and_validate_cmd "sudo mkdir -p `dirname ${KUBECTL_RUN}`"
+  run_and_validate_cmd "sudo mv ${KUBECTL} ${KUBECTL_RUN}"
+  popd
+
+  export KUBERNETES_MASTER=http://${_master}:8080
+}
+
+function setup_kubelet() {
+#  the component that runs on all of the machines in your cluster and does things like starting pods and containers.
+
   local _master_ip=$1
   local _service=${2:-$KUBELET_RUN}
   local _service_file=`basename ${_service}`
   local _content=`cat << 'EOF'
 [Service]
-Environment=KUBELET_VERSION=v1.3.5_coreos.0
+Environment=KUBELET_IMAGE_TAG=<__K8S_VERSION__>
+Environment="RKT_RUN_ARGS=--uuid-file-save=/var/run/kubelet-pod.uuid \\\
+  --volume var-log,kind=host,source=/var/log \\\
+  --mount volume=var-log,target=/var/log \\\
+  --volume dns,kind=host,source=/etc/resolv.conf \\\
+  --mount volume=dns,target=/etc/resolv.conf" \\\
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStartPre=/usr/bin/mkdir -p /var/log/containers
+ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \\\
-
   --api-servers=http://127.0.0.1:8080 \\\
-
   --register-schedulable=false \\\
-
+  --cni-conf-dir=/etc/kubernetes/cni/net.d \\\
+  --network-plugin=<__NETWORK_PLUGIN__> \\\
+  --container-runtime=docker \\\
   --allow-privileged=true \\\
-
-  --config=/etc/kubernetes/manifests \\\
-
+  --pod-manifest-path=/etc/kubernetes/manifests \\\
   --hostname-override=<__MASTER_IP__> \\\
-
-  --cluster-dns=10.13.0.10 \\\
-
-  --cluster-domain=cluster.local
+  --cluster_dns=<__DNS_SERVICE_IP__> \\\
+  --cluster_domain=cluster.local
+ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 Restart=always
 RestartSec=10
+
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -164,14 +185,17 @@ EOF
 
   pushd ~
   overwrite_content "${_content}" "${_service_file}"
+  replace_word_in_file "<__K8S_VERSION__>" "${K8S_VERSION}" "${_service_file}"
   replace_word_in_file "<__MASTER_IP__>" "${_master_ip}" "${_service_file}"
+  replace_word_in_file "<__DNS_SERVICE_IP__>" "${_master_ip}" "${_service_file}"
+  replace_word_in_file "<__NETWORK_PLUGIN__>" "${K8S_NETWORK_PLUGIN}" "${_service_file}"
   run_and_validate_cmd "sudo mv -f ${_service_file} /etc/systemd/system/"
   popd
 }
 
-function create_k8sapi_manifest() {
+function create_kubelet_api_manifest() {
   local _master_ip=$1
-  local _manifest=${2:-$K8S_API_MANIFEST}
+  local _manifest=${2:-$KUBELET_API_MANIFEST}
   local _manifest_file=`basename ${_manifest}`
 
   local _content=`cat << EOF
@@ -230,8 +254,8 @@ EOF`
   popd
 }
 
-function create_k8spod_manifest() {
-  local _manifest=${1:-$K8S_POD_MANIFEST}
+function create_kubelet_manifest() {
+  local _manifest=${1:-$KUBELET_POD_MANIFEST}
   local _manifest_file=`basename ${_manifest}`
 
   local _content=`cat << EOF
@@ -320,8 +344,8 @@ EOF`
   popd
 }
 
-function create_k8s_proxy() {
-  local _proxy=${1:-$K8S_PROXY_MANIFEST}
+function create_kubelet_proxy_manifest() {
+  local _proxy=${1:-$KUBELET_PROXY_MANIFEST}
   local _proxy_file=`basename ${_proxy}`
 
   local _content=`cat << EOF
@@ -359,8 +383,8 @@ EOF`
   popd
 }
 
-function create_k8s_controller() {
-  local _controller=${1:-$K8S_CONTROLLER_MANIFEST}
+function create_kubelet_controller_manifest() {
+  local _controller=${1:-$KUBELET_CONTROLLER_MANIFEST}
   local _controller_file=`basename ${_controller}`
 
   local _content=`cat << EOF
@@ -411,8 +435,8 @@ EOF`
   popd
 }
 
-function create_k8s_scheduler() {
-  local _scheduler=${1:-$K8S_SCHEDULER_MANIFEST}
+function create_kubelet_scheduler_manifest() {
+  local _scheduler=${1:-$KUBELET_SCHEDULER_MANIFEST}
   local _scheduler_file=`basename ${_scheduler}`
 
   local _content=`cat << EOF

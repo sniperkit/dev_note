@@ -26,12 +26,10 @@ K8S_WORKER_KEY_CONF="worker-openssl.cnf"
 
 K8S_CNI_CALICO="/etc/kubernetes/cni/net.d/10-calico.conf"
 
-KUBECTL="kubectl"
-KUBECTL_DOWNLOAD="https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/${K8SCTL}"
-KUBECTL_RUN="/opt/bin/${K8SCTL}"
+KUBECTL_DOWNLOAD="https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/kubectl"
+KUBECTL_RUN="/opt/bin/kubectl"
 
-KUBELET_UNIT="kubelet.service"
-KUBELET_RUN="/etc/systemd/system/${KUBELET_UNIT}"
+KUBELET_UNIT="/etc/systemd/system/kubelet.service"
 
 KUBELET_CONF="/etc/kubernetes/kubelet.kubeconfig"
 
@@ -188,13 +186,13 @@ function setup_tls_assets() {
 }
 
 function setup_cni_calico_network() {
-  local _master=$1 #ip
+  local _etcd_host=$1 #ip
   local _conf=${2:-$K8S_CNI_CALICO}
   local _content=`cat << EOF
 {
     "name": "calico-k8s-network",
     "type": "calico",
-    "etcd_endpoints": "http://${_master}:2379",
+    "etcd_endpoints": "http://${_etcd_host}:2379",
     "log_level": "info",
     "ipam": {
         "type": "calico-ipam"
@@ -240,11 +238,10 @@ function setup_kubeadm() {
 function setup_kubecli() {
 #  the command line util to talk to your cluster.
 
-  local _download=${1:-$KUBECTL_DOWNLOAD}
-  local _master=${2:-127.0.0.1}
+  local _master=$1
 
   pushd ~
-  run_and_validate_cmd "curl ${_download} -o ${KUBECTL}"
+  run_and_validate_cmd "curl ${KUBECTL_DOWNLOAD} -o ${KUBECTL}"
   run_and_validate_cmd "sudo chmod +x ${KUBECTL}"
   run_and_validate_cmd "sudo mkdir -p `dirname ${KUBECTL_RUN}`"
   run_and_validate_cmd "sudo mv ${KUBECTL} ${KUBECTL_RUN}"
@@ -257,29 +254,27 @@ function setup_kubelet() {
 #  the component that runs on all of the machines in your cluster and does things like starting pods and containers.
 
   local _master_ip=$1
-  local _service=${2:-$KUBELET_RUN}
-  local _service_file=`basename ${_service}`
-  local _cni=${3:-$K8S_CNI_CALICO}
-  local _cni=${3:-$K8S_CNI_CALICO}
-  local _content=`cat << 'EOF'
+  local _cni_dir=`dirname ${K8S_CNI_CALICO}`
+  local _content=`cat << "EOF"
 [Service]
 Environment=KUBELET_IMAGE_TAG=<__K8S_VERSION__>
-Environment="RKT_RUN_ARGS=--uuid-file-save=/var/run/kubelet-pod.uuid \\\
-  --volume var-log,kind=host,source=/var/log \\\
-  --mount volume=var-log,target=/var/log \\\
-  --volume dns,kind=host,source=/etc/resolv.conf \\\
-  --mount volume=dns,target=/etc/resolv.conf" \\\
+Environment="RKT_RUN_ARGS=--uuid-file-save=/var/run/kubelet-pod.uuid \\
+  --volume var-log,kind=host,source=/var/log \\
+  --mount volume=var-log,target=/var/log \\
+  --volume dns,kind=host,source=/etc/resolv.conf \\
+  --mount volume=dns,target=/etc/resolv.conf" \\
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
-ExecStart=/usr/lib/coreos/kubelet-wrapper \\\
-  --cni-conf-dir=<__CNI_DIR__> \\\
-  --network-plugin=<__NETWORK_PLUGIN__> \\\
-  --container-runtime=docker \\\
-  --allow-privileged=true \\\
-  --pod-manifest-path=/etc/kubernetes/manifests \\\
-  --hostname-override=<__MASTER_IP__> \\\
-  --cluster_dns=<__DNS_SERVICE_IP__> \\\
+ExecStart=/usr/lib/coreos/kubelet-wrapper \\
+  --kubeconfig=<__KUBECONFIG__> \\
+  --cni-conf-dir=<__CNI_DIR__> \\
+  --network-plugin=<__NETWORK_PLUGIN__> \\
+  --container-runtime=docker \\
+  --allow-privileged=true \\
+  --pod-manifest-path=/etc/kubernetes/manifests \\
+  --hostname-override=<__MASTER_IP__> \\
+  --cluster_dns=<__DNS_SERVICE_IP__> \\
   --cluster_domain=cluster.local
 ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
 Restart=always
@@ -290,21 +285,23 @@ WantedBy=multi-user.target
 EOF
 `
 
-  pushd ~
-  overwrite_content "${_content}" "${_service_file}"
-  replace_word_in_file "<__K8S_VERSION__>" "${K8S_VERSION}" "${_service_file}"
-  replace_word_in_file "<__MASTER_IP__>" "${_master_ip}" "${_service_file}"
-  replace_word_in_file "<__DNS_SERVICE_IP__>" "${_master_ip}" "${_service_file}"
-  replace_word_in_file "<__NETWORK_PLUGIN__>" "${K8S_NETWORK_PLUGIN}" "${_service_file}"
-  replace_word_in_file "<__CNI_DIR__>" "`dirname ${_cni}`" "${_service_file}"
-  run_and_validate_cmd "sudo mv -f ${_service_file} /etc/systemd/system/"
-  popd
+  local _escaped_kubelet_conf=`escape_forward_slash "${KUBELET_CONF}"`
+  local _escaped_cni=`escape_forward_slash "${_cni_dir}"`
+
+  overwrite_content "${_content}" "${KUBELET_UNIT}" "sudo"
+
+  replace_word_in_file "<__K8S_VERSION__>" "${K8S_VERSION}" "${KUBELET_UNIT}" "sudo"
+  replace_word_in_file "<__MASTER_IP__>" "${_master_ip}" "${KUBELET_UNIT}" "sudo"
+  replace_word_in_file "<__DNS_SERVICE_IP__>" "${_master_ip}" "${KUBELET_UNIT}" "sudo"
+  replace_word_in_file "<__NETWORK_PLUGIN__>" "${K8S_NETWORK_PLUGIN}" "${KUBELET_UNIT}" "sudo"
+  replace_word_in_file "<__KUBECONFIG__>" "${_escaped_kubelet_conf}" "${KUBELET_UNIT}" "sudo"
+  replace_word_in_file "<__CNI_DIR__>" "${_escaped_cni}" "${KUBELET_UNIT}" "sudo"
 }
 
 function create_kubelet_api_manifest() {
-  local _master_ip=$1
-  local _manifest=${2:-$KUBELET_API_MANIFEST}
-  local _manifest_file=`basename ${_manifest}`
+  local _master_host=$1 #ip
+  local _etcd_host=$2 #ip
+  local _manifest=${3:-$KUBELET_API_MANIFEST}
 
   local _content=`cat << EOF
 apiVersion: v1
@@ -316,16 +313,16 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: quay.io/coreos/hyperkube:<__K8S_VERSION__>
+    image: quay.io/coreos/hyperkube:${K8S_VERSION}
     command:
     - /hyperkube
     - apiserver
     - --bind-address=0.0.0.0
-    - --etcd-servers=http://<__master_ip__>:2379
+    - --etcd-servers=http://${_etcd_host}:2379
     - --allow-privileged=true
     - --service-cluster-ip-range=10.13.0.0/24
     - --secure-port=443
-    - --advertise-address=<__master_ip__>
+    - --advertise-address=${_master_host}
     - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota
     - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
     - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
@@ -355,17 +352,12 @@ spec:
     name: ssl-certs-host
 EOF`
 
-  pushd ~
-  overwrite_content "${_content}" "${_manifest_file}"
-  replace_word_in_file "<__K8S_VERSION__>" "${K8S_VERSION}" "${_manifest_file}"
-  run_and_validate_cmd "sudo mv -f ${_manifest_file} ${_manifest}"
-  popd
+  overwrite_content "${_content}" "${_manifest}" "sudo"
 }
 
-function create_kubelet_manifest() {
-  local _manifest=${1:-$KUBELET_POD_MANIFEST}
-  local _manifest_file=`basename ${_manifest}`
-
+function create_kubelet_pod_manifest() {
+  local _master_host=$1 #ip
+  local _etcd_host=$2 #ip
   local _content=`cat << EOF
 apiVersion: v1
 kind: Pod
@@ -397,9 +389,9 @@ spec:
       image: "b.gcr.io/kuar/etcd:2.1.1"
       args:
         - "--data-dir=/var/lib/etcd"
-        - "--advertise-client-urls=http://127.0.0.1:2379"
-        - "--listen-client-urls=http://127.0.0.1:2379"
-        - "--listen-peer-urls=http://127.0.0.1:2380"
+        - "--advertise-client-urls=http://${_etcd_host}:2379"
+        - "--listen-client-urls=http://${_etcd_host}:2379"
+        - "--listen-peer-urls=http://${_etcd_host}:2380"
         - "--name=etcd"
       volumeMounts:
         - mountPath: /var/lib/etcd
@@ -408,7 +400,7 @@ spec:
       image: "b.gcr.io/kuar/kube-apiserver:1.0.3"
       args:
         - "--allow-privileged=true"
-        - "--etcd-servers=http://127.0.0.1:2379"
+        - "--etcd-servers=http://${_etcd_host}:2379"
         - "--insecure-bind-address=0.0.0.0"
         - "--service-cluster-ip-range=10.200.20.0/24"
         - "--v=2"
@@ -420,17 +412,17 @@ spec:
     - name: "kube-controller-manager"
       image: "b.gcr.io/kuar/kube-controller-manager:1.0.3"
       args:
-        - "--master=http://127.0.0.1:8080"
+        - "--master=http://${_master_host}:8080"
         - "--v=2"
     - name: "kube-scheduler"
       image: "b.gcr.io/kuar/kube-scheduler:1.0.3"
       args:
-        - "--master=http://127.0.0.1:8080"
+        - "--master=http://${_master_host}:8080"
         - "--v=2"
     - name: "kube-proxy"
       image: "b.gcr.io/kuar/kube-proxy:1.0.3"
       args:
-        - "--master=http://127.0.0.1:8080"
+        - "--master=http://${_master_host}:8080"
         - "--v=2"
       securityContext:
         privileged: true
@@ -445,17 +437,11 @@ spec:
           name: "lib64"
 EOF`
 
-  pushd ~
-  overwrite_content "${_content}" "${_manifest_file}"
-#  replace_word_in_file "<__master_ip__>" "${_master_ip}" "${_manifest_file}"
-  run_and_validate_cmd "sudo mv -f ${_manifest_file} ${_manifest}"
-  popd
+  overwrite_content "${_content}" "${KUBELET_POD_MANIFEST}" "sudo"
 }
 
 function create_kubelet_proxy_manifest() {
-  local _proxy=${1:-$KUBELET_PROXY_MANIFEST}
-  local _proxy_file=`basename ${_proxy}`
-
+  local _master_host=$1
   local _content=`cat << EOF
 apiVersion: v1
 kind: Pod
@@ -466,11 +452,11 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:<__K8S_VERSION__>
+    image: quay.io/coreos/hyperkube:${K8S_VERSION}
     command:
     - /hyperkube
     - proxy
-    - --master=http://127.0.0.1:8080
+    - --master=http://${_master_host}:8080
     - --proxy-mode=iptables
     securityContext:
       privileged: true
@@ -484,17 +470,11 @@ spec:
     name: ssl-certs-host
 EOF`
 
-  pushd ~
-  overwrite_content "${_content}" "${_proxy_file}"
-  replace_word_in_file "<__K8S_VERSION__>" "${K8S_VERSION}" "${_proxy_file}"
-  run_and_validate_cmd "sudo mv -f ${_proxy_file} ${_proxy}"
-  popd
+  overwrite_content "${_content}" "${KUBELET_PROXY_MANIFEST}"
 }
 
 function create_kubelet_controller_manifest() {
-  local _controller=${1:-$KUBELET_CONTROLLER_MANIFEST}
-  local _controller_file=`basename ${_controller}`
-
+  local _master_host=$1
   local _content=`cat << EOF
 apiVersion: v1
 kind: Pod
@@ -505,17 +485,17 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: quay.io/coreos/hyperkube:<__K8S_VERSION__>
+    image: quay.io/coreos/hyperkube:${K8S_VERSION}
     command:
     - /hyperkube
     - controller-manager
-    - --master=http://127.0.0.1:8080
+    - --master=http://${_master_host}:8080
     - --leader-elect=true
     - --service-account-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
     - --root-ca-file=/etc/kubernetes/ssl/ca.pem
     livenessProbe:
       httpGet:
-        host: 127.0.0.1
+        host: ${_master_host}
         path: /healthz
         port: 10252
       initialDelaySeconds: 15
@@ -536,16 +516,13 @@ spec:
     name: ssl-certs-host
 EOF`
 
-  pushd ~
-  overwrite_content "${_content}" "${_controller_file}"
-  replace_word_in_file "<__K8S_VERSION__>" "${K8S_VERSION}" "${_controller_file}"
-  run_and_validate_cmd "sudo mv -f ${_controller_file} ${_controller}"
-  popd
+  overwrite_content "${_content}" "${KUBELET_CONTROLLER_MANIFEST}"
 }
 
 function create_kubelet_scheduler_manifest() {
-  local _scheduler=${1:-$KUBELET_SCHEDULER_MANIFEST}
-  local _scheduler_file=`basename ${_scheduler}`
+  local _master=$1
+#  local _manifest=${2:-$KUBELET_SCHEDULER_MANIFEST}
+#  local _scheduler_file=`basename ${_scheduler}`
 
   local _content=`cat << EOF
 apiVersion: v1
@@ -557,24 +534,20 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: quay.io/coreos/hyperkube:<__K8S_VERSION__>
+    image: quay.io/coreos/hyperkube:${K8S_VERSION}
     command:
     - /hyperkube
     - scheduler
-    - --master=http://127.0.0.1:8080
+    - --master=http://${_master}:8080
     - --leader-elect=true
     livenessProbe:
       httpGet:
-        host: 127.0.0.1
+        host: ${_master}
         path: /healthz
         port: 10251
       initialDelaySeconds: 15
       timeoutSeconds: 1
 EOF`
 
-  pushd ~
-  overwrite_content "${_content}" "${_scheduler_file}"
-  replace_word_in_file "<__K8S_VERSION__>" "${K8S_VERSION}" "${_scheduler_file}"
-  run_and_validate_cmd "sudo mv -f ${_scheduler_file} ${_scheduler}"
-  popd
+  overwrite_content "${_content}" "${KUBELET_SCHEDULER_MANIFEST}" "sudo"
 }

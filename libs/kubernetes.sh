@@ -5,13 +5,13 @@
 
 TMP_DIR=`eval echo ~$USER`
 
-K8S_VERSION="v1.5.4_coreos.0"
+K8S_VERSION="v1.9.3_coreos.0"
 K8S_DNS_SERVICE_IP="8.8.8.8"
 K8S_NETWORK_PLUGIN="cni"
-K8S_ROOT="/etc/kubernetes"
+K8S_CONF="/etc/kubernetes/kube_conf"
 
 K8S_TMP_KEY_DIR="${TMP_DIR}/kube-ssl"
-K8S_KEY_DIR="${K8S_ROOT}/ssl"
+K8S_KEY_DIR="/etc/kubernetes/ssl"
 
 K8S_ROOT_KEY="ca"
 
@@ -20,6 +20,8 @@ K8S_API_KEY="apiserver"
 
 K8S_WORKER_KEY_CONF="worker-openssl.cnf"
 #K8S_WORKER_KEY="<__FQDN__>"
+
+K8S_CNI_CALICO="/etc/kubernetes/cni/net.d/10-calico.conf"
 
 KUBECTL="kubectl"
 KUBECTL_DOWNLOAD="https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/${K8SCTL}"
@@ -33,6 +35,33 @@ KUBELET_POD_MANIFEST="/etc/kubernetes/manifests/kubernetes.yaml"
 KUBELET_PROXY_MANIFEST="/etc/kubernetes/manifests/kube-proxy.yaml"
 KUBELET_CONTROLLER_MANIFEST="/etc/kubernetes/manifests/kube-controller-manager.yaml"
 KUBELET_SCHEDULER_MANIFEST="/etc/kubernetes/manifests/kube-scheduler.yaml"
+
+function create_kube_config() {
+  local _master=$1
+  local _file=${2:-$K8S_CONF}
+  local _content=`cat << EOF
+apiVersion: v1
+kind: Config
+preferences: {}
+
+clusters:
+- cluster:
+  name: scratch
+  server: https://${_master}
+
+users:
+- name: developer
+- name: experimenter
+
+contexts:
+- context:
+    cluster: scratch
+  name: dev-one
+- context:
+    cluster: scratch
+  name: dev-two
+EOF`
+}
 
 function create_root_keys() {
   local _key=${1:-$KUBELET_ROOT_KEY}
@@ -82,7 +111,7 @@ function create_worker_keys() {
   local _content=`cat << 'EOF'
 [req]
 req_extensions = v3_req
-distinguished_name = req_distinguished_name
+distinguished_name = req_distinguished_name/
 [req_distinguished_name]
 [ v3_req ]
 basicConstraints = CA:FALSE
@@ -125,6 +154,49 @@ function setup_tls_assets() {
   popd
 }
 
+function setup_cni_calico_network() {
+  local _master=$1 #ip
+  local _conf=${2:$K8S_CNI_CALICO}
+  local _content=`cat << EOF
+{
+    "name": "calico-k8s-network",
+    "type": "calico",
+    "etcd_endpoints": "http://${_master}:2379",
+    "log_level": "info",
+    "ipam": {
+        "type": "calico-ipam"
+    },
+    "policy": {
+        "type": "k8s"
+    }
+}
+EOF`
+}
+
+function setup_cni_flannel_network() {
+  local _master=$1 #ip
+  local _flannel_config="/etc/flannel/options.env"
+  local _flannel_config_content=`cat << EOF
+FLANNELD_IFACE=${_master}
+FLANNELD_ETCD_ENDPOINTS=http://${_master}:2379
+EOF
+`
+  local _flannel_unit="/etc/systemd/system/flanneld.service.d"
+  local _flannel_unit_content=`cat << EOF
+[Service]
+ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
+EOF
+`
+
+  create_dir "`dirname ${_flannel_config}`"
+  create_dir "`dirname ${_flannel_unit}`"
+
+  overwrite_content "${_flannel_config_content}" "${_flannel_config}"
+  overwrite_content "${_flannel_unit_content}" "${_flannel_unit}"
+
+  etcdctl set /coreos.com/network/config "{\"Network\":\"10.12.0.0/16\",\"Backend\":{\"Type\":\"vxlan\"}}"
+}
+
 function setup_kubeadm() {
 #  the command to bootstrap the cluster.
   :
@@ -152,6 +224,7 @@ function setup_kubelet() {
   local _master_ip=$1
   local _service=${2:-$KUBELET_RUN}
   local _service_file=`basename ${_service}`
+  local _cni=${3:-$K8S_CNI_CALICO}
   local _content=`cat << 'EOF'
 [Service]
 Environment=KUBELET_IMAGE_TAG=<__K8S_VERSION__>
@@ -166,7 +239,7 @@ ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \\\
   --api-servers=http://127.0.0.1:8080 \\\
   --register-schedulable=false \\\
-  --cni-conf-dir=/etc/kubernetes/cni/net.d \\\
+  --cni-conf-dir=<__CNI_DIR__> \\\
   --network-plugin=<__NETWORK_PLUGIN__> \\\
   --container-runtime=docker \\\
   --allow-privileged=true \\\
@@ -189,6 +262,7 @@ EOF
   replace_word_in_file "<__MASTER_IP__>" "${_master_ip}" "${_service_file}"
   replace_word_in_file "<__DNS_SERVICE_IP__>" "${_master_ip}" "${_service_file}"
   replace_word_in_file "<__NETWORK_PLUGIN__>" "${K8S_NETWORK_PLUGIN}" "${_service_file}"
+  replace_word_in_file "<__CNI_DIR__>" "`dirname ${_cni}`" "${_service_file}"
   run_and_validate_cmd "sudo mv -f ${_service_file} /etc/systemd/system/"
   popd
 }
@@ -208,7 +282,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: quay.io/coreos/hyperkube:v1.3.5_coreos.0
+    image: quay.io/coreos/hyperkube:<__K8S_VERSION__>
     command:
     - /hyperkube
     - apiserver
@@ -249,7 +323,7 @@ EOF`
 
   pushd ~
   overwrite_content "${_content}" "${_manifest_file}"
-  replace_word_in_file "<__master_ip__>" "${_master_ip}" "${_manifest_file}"
+  replace_word_in_file "<__K8S_VERSION__>" "${K8S_VERSION}" "${_manifest_file}"
   run_and_validate_cmd "sudo mv -f ${_manifest_file} ${_manifest}"
   popd
 }
@@ -358,7 +432,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:v1.3.5_coreos.0
+    image: quay.io/coreos/hyperkube:<__K8S_VERSION__>
     command:
     - /hyperkube
     - proxy
@@ -378,7 +452,7 @@ EOF`
 
   pushd ~
   overwrite_content "${_content}" "${_proxy_file}"
-#  replace_word_in_file "<__master_ip__>" "${_master_ip}" "${_proxy_file}"
+  replace_word_in_file "<__K8S_VERSION__>" "${K8S_VERSION}" "${_proxy_file}"
   run_and_validate_cmd "sudo mv -f ${_proxy_file} ${_proxy}"
   popd
 }
@@ -397,7 +471,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: quay.io/coreos/hyperkube:v1.3.5_coreos.0
+    image: quay.io/coreos/hyperkube:<__K8S_VERSION__>
     command:
     - /hyperkube
     - controller-manager
@@ -430,7 +504,7 @@ EOF`
 
   pushd ~
   overwrite_content "${_content}" "${_controller_file}"
-#  replace_word_in_file "<__master_ip__>" "${_master_ip}" "${_controller_file}"
+  replace_word_in_file "<__K8S_VERSION__>" "${K8S_VERSION}" "${_controller_file}"
   run_and_validate_cmd "sudo mv -f ${_controller_file} ${_controller}"
   popd
 }
@@ -449,7 +523,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: quay.io/coreos/hyperkube:v1.3.5_coreos.0
+    image: quay.io/coreos/hyperkube:<__K8S_VERSION__>
     command:
     - /hyperkube
     - scheduler
@@ -466,7 +540,7 @@ EOF`
 
   pushd ~
   overwrite_content "${_content}" "${_scheduler_file}"
-#  replace_word_in_file "<__master_ip__>" "${_master_ip}" "${_scheduler_file}"
+  replace_word_in_file "<__K8S_VERSION__>" "${K8S_VERSION}" "${_scheduler_file}"
   run_and_validate_cmd "sudo mv -f ${_scheduler_file} ${_scheduler}"
   popd
 }

@@ -156,7 +156,7 @@ function setup_tls_assets() {
 
 function setup_cni_calico_network() {
   local _master=$1 #ip
-  local _conf=${2:$K8S_CNI_CALICO}
+  local _conf=${2:-$K8S_CNI_CALICO}
   local _content=`cat << EOF
 {
     "name": "calico-k8s-network",
@@ -171,6 +171,10 @@ function setup_cni_calico_network() {
     }
 }
 EOF`
+
+  create_dir "`dirname ${_conf}`" "sudo"
+  overwrite_content "${_content}" "${TMP_DIR}/`basename ${_conf}`"
+  copy_file_or_dir "${TMP_DIR}/`basename ${_conf}`" "${_conf}" "sudo"
 }
 
 function setup_cni_flannel_network() {
@@ -238,7 +242,6 @@ ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \\\
   --api-servers=http://127.0.0.1:8080 \\\
-  --register-schedulable=false \\\
   --cni-conf-dir=<__CNI_DIR__> \\\
   --network-plugin=<__NETWORK_PLUGIN__> \\\
   --container-runtime=docker \\\

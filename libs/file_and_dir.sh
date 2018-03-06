@@ -3,9 +3,10 @@
 
 function create_dir() {
   local dir=$1
+  local sudo=${2:-}
 
   if [[ ! -d $dir ]]; then
-    mkdir -p $dir && \
+    ${sudo} mkdir -p $dir && \
     log "${dir} ... ${FONT_GREEN} ok${FONT_NORMAL}" "[DIR][create]"
   else
     log "${dir} ... pass" "[DIR][create]"
@@ -35,10 +36,11 @@ function change_dir() {
 function copy_file_or_dir() {
   local src=$1
   local dst=$2
+  local sudo=${3:-}
 
   [[ ! -d `dirname ${dst}` ]] && create_dir "`dirname ${dst}`"
 
-  \cp -rf $src $dst && \
+  ${sudo} \cp -rf $src $dst && \
   log "${src} to ${dst} ... ${FONT_GREEN}ok${FONT_NORMAL}" "[COPY]" || \
   log "${src} to ${dst} ... ${FONT_RED}failed${FONT_NORMAL}" "[COPY]"
 }

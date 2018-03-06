@@ -15,6 +15,7 @@ K8S_NETWORK_PLUGIN="cni"
 
 K8S_TMP_KEY_DIR="${TMP_DIR}/kube-ssl"
 K8S_KEY_DIR="/etc/kubernetes/ssl"
+K8S_LOG_DIR="/var/log/kubernetes"
 
 K8S_ROOT_KEY="ca"
 
@@ -39,10 +40,10 @@ KUBELET_PROXY_MANIFEST="/etc/kubernetes/manifests/kube-proxy.yaml"
 KUBELET_CONTROLLER_MANIFEST="/etc/kubernetes/manifests/kube-controller-manager.yaml"
 KUBELET_SCHEDULER_MANIFEST="/etc/kubernetes/manifests/kube-scheduler.yaml"
 
+KUBELET_API_SECURE_PORT=6443
+KUBELET_API_INSECURE_PORT=8080
+
 function create_kube_config() {
-  local _master=$1
-  local _port=${2:-8080}
-  local _conf=${3:-$KUBELET_CONF}
   local _content=`cat << EOF
 apiVersion: v1
 kind: Config
@@ -65,23 +66,24 @@ contexts:
   name: dev-two
 EOF`
 
-  overwrite_content "${_conf}" "sudo"
+  overwrite_content "${KUBELET_CONF}" "sudo"
 }
 
 function set_kubeconfig_cluster() {
   local _master=$1
-  local _port=$2
-  local _cluster=$3
-  local _option=${4:-}
-  local _key=${5:-$K8S_KEY_DIR/$K8S_ROOT_KEY.pem}
-  local _conf=${6:-$KUBELET_CONF}
+  local _cluster=$2
+  local _option=${3:-}
 
   if [ "${_option}" = "insecure" ]; then
-    sudo kubectl config --kubeconfig=${_conf} set-cluster ${_cluster} --server=https://${_master}:${_port} --insecure-skip-tls-verify && \
+    sudo kubectl config --kubeconfig=${KUBELET_CONF} set-cluster ${_cluster} \
+    --server=https://${_master}:${KUBELET_API_SECURE_PORT} \
+    --insecure-skip-tls-verify && \
     log "... ${FONT_GREEN}ok${FONT_NORMAL}" "[KUBECTL][insecure][set-cluster]" ||
     log "... ${FONT_RED}failed${FONT_NORMAL}" "[KUBECTL][insecure][set-cluster]"
   else
-    sudo kubectl config --kubeconfig=${_conf} set-cluster ${_cluster} --server=https://${_master}:${_port} --certificate-authority=${_key} && \
+    sudo kubectl config --kubeconfig=${KUBELET_CONF} set-cluster ${_cluster} \
+    --server=https://${_master}:${KUBELET_API_SECURE_PORT} \
+    --certificate-authority=${K8S_KEY_DIR}/${K8S_ROOT_KEY.pem} && \
     log "... ${FONT_GREEN}ok${FONT_NORMAL}" "[KUBECTL][secure][set-cluster]" ||
     log "... ${FONT_RED}failed${FONT_NORMAL}" "[KUBECTL][secure][set-cluster]"
   fi
@@ -89,25 +91,19 @@ function set_kubeconfig_cluster() {
 
 function set_kubeconfig_context() {
   local _context=$1
-  local _conf=${2:-$KUBELET_CONF}
 
-  sudo kubectl config --kubeconfig=${_conf} use-context ${_context} && \
+  sudo kubectl config --kubeconfig=${KUBELET_CONF} use-context ${_context} && \
   log "... ${FONT_GREEN}ok${FONT_NORMAL}" "[KUBECTL][set-context]" ||
   log "... ${FONT_RED}failed${FONT_NORMAL}" "[KUBECTL][set-context]"
 }
 
 function create_root_keys() {
-  local _key=${1:-$KUBELET_ROOT_KEY}
-
-  sudo openssl genrsa -out ${_key}-key.pem 2048
-  sudo openssl req -x509 -new -nodes -key ${_key}-key.pem -days 10000 -out ${_key}.pem -subj "/CN=kube-ca"
+  sudo openssl genrsa -out ${K8S_ROOT_KEY}-key.pem 2048
+  sudo openssl req -x509 -new -nodes -key ${K8S_ROOT_KEY}-key.pem -days 10000 -out ${K8S_ROOT_KEY}.pem -subj "/CN=kube-ca"
 }
 
 function create_api_server_keys() {
   local _master=$1 #ip
-  local _key_conf=${2:-$KUBELET_API_KEY_CONF}
-  local _apikey=${3:-$KUBELET_API_KEY}
-  local _rootkey=${4:-$KUBELET_ROOT_KEY}
   local _content=`cat << 'EOF'
 [req]
 req_extensions = v3_req
@@ -127,19 +123,23 @@ IP.2 = <__MASTER_PUBLIC_IP__>
 EOF
 `
 
-  overwrite_content "${_content}" "${_key_conf}"
-  replace_word_in_file "<__MASTER_PUBLIC_IP__>" "${_master}" "${_key_conf}"
+  overwrite_content "${_content}" "${K8S_API_KEY_CONF}"
+  replace_word_in_file "<__MASTER_PUBLIC_IP__>" "${_master}" "${K8S_API_KEY_CONF}"
 
-  sudo openssl genrsa -out ${_apikey}-key.pem 2048
-  sudo openssl req -new -key ${_apikey}-key.pem -out ${_apikey}.csr -subj "/CN=kube-apiserver" -config ${_key_conf}
-  sudo openssl x509 -req -in ${_apikey}.csr -CA ${_rootkey}.pem -CAkey ${_rootkey}-key.pem -CAcreateserial -out ${_apikey}.pem -days 365 -extensions v3_req -extfile ${_key_conf}
+  sudo openssl genrsa -out ${K8S_API_KEY}-key.pem 2048
+
+  sudo openssl req -new -key ${K8S_API_KEY}-key.pem \
+  -out ${K8S_API_KEY}.csr -subj "/CN=kube-apiserver" -config ${K8S_API_KEY_CONF}
+
+  sudo openssl x509 -req -in ${K8S_API_KEY}.csr \
+  -CA ${K8S_ROOT_KEY}.pem -CAkey ${K8S_ROOT_KEY}-key.pem -CAcreateserial \
+  -out ${K8S_API_KEY}.pem -days 365 -extensions v3_req -extfile ${K8S_API_KEY_CONF}
 }
 
 function create_worker_keys() {
   local _worker_ip=$1 #ip
   local _worker_fqdn=${2:-$_worker_ip}
-  local _key_conf=${3:-$KUBELET_WORKER_KEY_CONF}
-  local _rootkey=${4:-$KUBELET_ROOT_KEY}
+
   local _content=`cat << 'EOF'
 [req]
 req_extensions = v3_req
@@ -154,40 +154,41 @@ IP.1 = $ENV::WORKER_IP
 EOF
 `
 
-  overwrite_content "${_content}" "${_key_conf}"
+  overwrite_content "${_content}" "${K8S_WORKER_KEY_CONF}"
 
   openssl genrsa -out ${_worker_fqdn}-worker-key.pem 2048
 
   WORKER_IP=${_worker_ip} \
-  openssl req -new -key ${_worker_fqdn}-worker-key.pem -out ${_worker_fqdn}-worker.csr -subj "/CN=${_worker_fqdn}" -config ${_key_conf}
+  openssl req -new -key ${_worker_fqdn}-worker-key.pem -out ${_worker_fqdn}-worker.csr -subj "/CN=${_worker_fqdn}" \
+  -config ${K8S_WORKER_KEY_CONF}
 
   WORKER_IP=${_worker_ip} \
-  openssl x509 -req -in ${_worker_fqdn}-worker.csr -CA ${_rootkey}.pem -CAkey ${_rootkey}-key.pem -CAcreateserial -out ${_worker_fqdn}-worker.pem -days 365 -extensions v3_req -extfile ${_key_conf}
+  openssl x509 -req -in ${_worker_fqdn}-worker.csr -CA ${K8S_ROOT_KEY}.pem -CAkey ${K8S_ROOT_KEY}-key.pem \
+  -CAcreateserial -out ${_worker_fqdn}-worker.pem -days 365 -extensions v3_req -extfile ${K8S_WORKER_KEY_CONF}
 }
 
 function setup_tls_assets() {
   local _master=$1
-  local _tls_tmp_dir=${2:-$KUBELET_TMP_KEY_DIR}
-  local _tls_dir=${2:-$KUBELET_KEY_DIR}
 
-  create_dir "$_tls_tmp_dir"
-  create_dir "$_tls_dir"
+  create_dir "${K8S_TMP_KEY_DIR}"
+  create_dir "${K8S_KEY_DIR}"
 
-  pushd ${_tls_tmp_dir}
+  pushd ${K8S_TMP_KEY_DIR}}
 
   create_root_keys
   create_api_server_keys ${_master}
 #  create_worker_keys ${_worker}
 
-  sudo cp ${_tls_tmp_dir}/*.pem ${_tls_dir}/
-  set_permission "600" "${_tls_dir}/*-key.pem" "sudo"
-  set_ownership "root" "root" "${_tls_dir}/*-key.pem" "sudo"
+  sudo cp ${K8S_TMP_KEY_DIR}}/*.pem ${K8S_KEY_DIR}/
+  set_permission "600" "${K8S_KEY_DIR}/*-key.pem" "sudo"
+  set_ownership "root" "root" "${K8S_KEY_DIR}/*-key.pem" "sudo"
+
   popd
 }
 
 function setup_cni_calico_network() {
   local _etcd_host=$1 #ip
-  local _conf=${2:-$K8S_CNI_CALICO}
+
   local _content=`cat << EOF
 {
     "name": "calico-k8s-network",
@@ -203,7 +204,7 @@ function setup_cni_calico_network() {
 }
 EOF`
 
-  overwrite_content "${_content}" "${_conf}" "sudo"
+  overwrite_content "${_content}" "${K8S_CNI_CALICO}" "sudo"
 }
 
 function setup_cni_flannel_network() {
@@ -247,7 +248,7 @@ function setup_kubecli() {
   run_and_validate_cmd "sudo mv ${KUBECTL} ${KUBECTL_RUN}"
   popd
 
-  export KUBERNETES_MASTER=http://${_master}:8080
+  export KUBERNETES_MASTER=http://${_master}:${KUBELET_API_INSECURE_PORT}
 }
 
 function setup_kubelet() {
@@ -301,7 +302,6 @@ EOF
 function create_kubelet_api_manifest() {
   local _master_host=$1 #ip
   local _etcd_host=$2 #ip
-  local _manifest=${3:-$KUBELET_API_MANIFEST}
 
   local _content=`cat << EOF
 apiVersion: v1
@@ -318,17 +318,21 @@ spec:
     - /hyperkube
     - apiserver
     - --bind-address=0.0.0.0
+    - --secure-port=${KUBELET_API_SECURE_PORT}
+    - --insecure-bind-address=${_master_host}
+    - --insecure-port=${KUBELET_API_INSECURE_PORT}
     - --etcd-servers=http://${_etcd_host}:2379
     - --allow-privileged=true
     - --service-cluster-ip-range=10.13.0.0/24
     - --secure-port=443
     - --advertise-address=${_master_host}
     - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota
-    - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
-    - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
-    - --client-ca-file=/etc/kubernetes/ssl/ca.pem
-    - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
+    - --tls-cert-file=${K8S_KEY_DIR}/${K8S_API_KEY}.pem
+    - --tls-private-key-file=${K8S_KEY_DIR}/${K8S_API_KEY}-key.pem
+    - --client-ca-file=${K8S_KEY_DIR}/${K8S_ROOT_KEY}.pem
+    - --service-account-key-file=${K8S_KEY_DIR}/${K8S_API_KEY}-key.pem
     - --runtime-config=extensions/v1beta1=true,extensions/v1beta1/networkpolicies=true
+    - --log-dir=${K8S_LOG_DIR}/kube_apiserver/
     ports:
     - containerPort: 443
       hostPort: 443
@@ -337,7 +341,7 @@ spec:
       hostPort: 8080
       name: local
     volumeMounts:
-    - mountPath: /etc/kubernetes/ssl
+    - mountPath: ${K8S_KEY_DIR}
       name: ssl-certs-kubernetes
       readOnly: true
     - mountPath: /etc/ssl/certs
@@ -345,14 +349,14 @@ spec:
       readOnly: true
   volumes:
   - hostPath:
-      path: /etc/kubernetes/ssl
+      path: ${K8S_KEY_DIR}
     name: ssl-certs-kubernetes
   - hostPath:
       path: /usr/share/ca-certificates
     name: ssl-certs-host
 EOF`
 
-  overwrite_content "${_content}" "${_manifest}" "sudo"
+  overwrite_content "${_content}" "${KUBELET_API_MANIFEST}" "sudo"
 }
 
 function create_kubelet_pod_manifest() {
@@ -386,7 +390,7 @@ spec:
         path: "/lib64"
   containers:
     - name: "etcd"
-      image: "b.gcr.io/kuar/etcd:2.1.1"
+      image: "gcr.io/kuar/etcd:2.1.1"
       args:
         - "--data-dir=/var/lib/etcd"
         - "--advertise-client-urls=http://${_etcd_host}:2379"
@@ -397,7 +401,7 @@ spec:
         - mountPath: /var/lib/etcd
           name: "etcd-datadir"
     - name: "kube-apiserver"
-      image: "b.gcr.io/kuar/kube-apiserver:1.0.3"
+      image: "gcr.io/kuar/kube-apiserver:1.0.3"
       args:
         - "--allow-privileged=true"
         - "--etcd-servers=http://${_etcd_host}:2379"
@@ -410,19 +414,19 @@ spec:
         - mountPath: /var/run/kubernetes
           name: "var-run-kubernetes"
     - name: "kube-controller-manager"
-      image: "b.gcr.io/kuar/kube-controller-manager:1.0.3"
+      image: "gcr.io/kuar/kube-controller-manager:1.0.3"
       args:
-        - "--master=http://${_master_host}:8080"
+        - "--master=http://${_master_host}:${KUBELET_API_INSECURE_PORT}"
         - "--v=2"
     - name: "kube-scheduler"
-      image: "b.gcr.io/kuar/kube-scheduler:1.0.3"
+      image: "gcr.io/kuar/kube-scheduler:1.0.3"
       args:
-        - "--master=http://${_master_host}:8080"
+        - "--master=http://${_master_host}:${KUBELET_API_INSECURE_PORT}"
         - "--v=2"
     - name: "kube-proxy"
-      image: "b.gcr.io/kuar/kube-proxy:1.0.3"
+      image: "gcr.io/kuar/kube-proxy:1.0.3"
       args:
-        - "--master=http://${_master_host}:8080"
+        - "--master=http://${_master_host}:${KUBELET_API_INSECURE_PORT}"
         - "--v=2"
       securityContext:
         privileged: true
@@ -456,7 +460,7 @@ spec:
     command:
     - /hyperkube
     - proxy
-    - --master=http://${_master_host}:8080
+    - --master=http://${_master_host}:${KUBELET_API_INSECURE_PORT}
     - --proxy-mode=iptables
     securityContext:
       privileged: true
@@ -489,10 +493,10 @@ spec:
     command:
     - /hyperkube
     - controller-manager
-    - --master=http://${_master_host}:8080
+    - --master=http://${_master_host}:${KUBELET_API_INSECURE_PORT}
     - --leader-elect=true
-    - --service-account-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
-    - --root-ca-file=/etc/kubernetes/ssl/ca.pem
+    - --service-account-private-key-file=${K8S_KEY_DIR}/${K8S_API_KEY}-key.pem
+    - --root-ca-file=${K8S_KEY_DIR}/${K8S_ROOT_KEY}.pem
     livenessProbe:
       httpGet:
         host: ${_master_host}
@@ -501,7 +505,7 @@ spec:
       initialDelaySeconds: 15
       timeoutSeconds: 1
     volumeMounts:
-    - mountPath: /etc/kubernetes/ssl
+    - mountPath: ${K8S_KEY_DIR}
       name: ssl-certs-kubernetes
       readOnly: true
     - mountPath: /etc/ssl/certs
@@ -509,7 +513,7 @@ spec:
       readOnly: true
   volumes:
   - hostPath:
-      path: /etc/kubernetes/ssl
+      path: ${K8S_KEY_DIR}
     name: ssl-certs-kubernetes
   - hostPath:
       path: /usr/share/ca-certificates
@@ -521,8 +525,6 @@ EOF`
 
 function create_kubelet_scheduler_manifest() {
   local _master=$1
-#  local _manifest=${2:-$KUBELET_SCHEDULER_MANIFEST}
-#  local _scheduler_file=`basename ${_scheduler}`
 
   local _content=`cat << EOF
 apiVersion: v1
@@ -538,7 +540,7 @@ spec:
     command:
     - /hyperkube
     - scheduler
-    - --master=http://${_master}:8080
+    - --master=http://${_master}:${KUBELET_API_INSECURE_PORT}
     - --leader-elect=true
     livenessProbe:
       httpGet:
@@ -551,3 +553,14 @@ EOF`
 
   overwrite_content "${_content}" "${KUBELET_SCHEDULER_MANIFEST}" "sudo"
 }
+
+
+#setup_cni_calico_network "$1"
+#set_kubeconfig_cluster "$1" "scratch"
+#set_kubeconfig_context "dev-one"
+#create_kubelet_api_manifest "$1" "$2"
+#create_kubelet_pod_manifest "$1" "$2"
+#create_kubelet_proxy_manifest "$1"
+#create_kubelet_controller_manifest "$1"
+#create_kubelet_scheduler_manifest "$1"
+#setup_kubelet "$1"

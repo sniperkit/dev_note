@@ -3,8 +3,8 @@
 function docker_stop_all_containers() {
   for container in `docker ps | tail -n +2 | awk '{print $1}'`; do
     docker stop ${container} && \
-    log "${FONT_GREEN} ... ok${FONT_NORMAL}" "[DOCKER][container-stop]" || \
-    log "${FONT_RED} ... failed${FONT_NORMAL}" "[DOCKER][container-stop]"
+    log "${container}${FONT_GREEN} ... ok${FONT_NORMAL}" "[DOCKER][container-stop]" || \
+    log "${container}${FONT_RED} ... failed${FONT_NORMAL}" "[DOCKER][container-stop]"
   done
 }
 

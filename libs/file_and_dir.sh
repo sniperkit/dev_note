@@ -1,5 +1,6 @@
 . ./log.sh
 . ./cmd.sh
+. ./hash.sh
 
 function create_dir() {
   local dir=$1
@@ -7,20 +8,20 @@ function create_dir() {
 
   if [[ ! -d $dir ]]; then
     ${sudo} mkdir -p $dir && \
-    log "${dir} ... ${FONT_GREEN} ok${FONT_NORMAL}" "[DIR][create]"
+    log "${dir} ... ${FONT_GREEN}ok${FONT_NORMAL}" "[DIR][create]"
   else
-    log "${dir} ... pass" "[DIR][create]"
+    log "${dir} ... ${FONT_YELLOW}pass${FONT_NORMAL}" "[DIR][create]"
   fi
 }
 
-function delete_dir_or_link() {
-  local dir=$1
+function delete_pathlink() {
+  local _path=$1
 
-  if [[ -d $dir || -L $dir ]]; then
-    rm -rf $dir && \
-    log "${dir} ... ${FONT_GREEN} ok${FONT_NORMAL}" "[DIR][remove]"
+  if [[ -f ${_path} || -d ${_path}  || -L ${_path}  ]]; then
+    rm -rf ${_path}  && \
+    log "${_path} ... ${FONT_GREEN}ok${FONT_NORMAL}" "[DIR][remove]"
   else
-    log "${dir} ... pass" "[DIR][remove]"
+    log "${_path} ... ${FONT_YELLOW}pass${FONT_NORMAL}" "[DIR][remove]"
   fi
 
 }
@@ -40,9 +41,12 @@ function copy_file_or_dir() {
 
   [[ ! -d `dirname ${dst}` ]] && create_dir "`dirname ${dst}`"
 
+  compare_item_hash "$src" "$dst" && \
+  ( \
   ${sudo} \cp -rf $src $dst && \
   log "${src} to ${dst} ... ${FONT_GREEN}ok${FONT_NORMAL}" "[COPY]" || \
-  log "${src} to ${dst} ... ${FONT_RED}failed${FONT_NORMAL}" "[COPY]"
+  log "${src} to ${dst} ... ${FONT_RED}failed${FONT_NORMAL}" "[COPY]" \
+  )
 }
 
 function set_ownership() {
@@ -68,12 +72,24 @@ function set_permission() {
 function overwrite_content() {
   local _content="$1"
   local _filepath=$2
+  local _sudo=${3:-}
+  local _tmp_dir=`eval echo ~$USER`
 #  local _cmd="echo \"${_content}\" > ${_filepath}"
 
+  echo "${_tmp_dir}/`basename ${_filepath}`"
+  echo "${_filepath}"
+
 #  run_and_validate_cmd "${_cmd}"
-  echo "${_content}" > ${_filepath} && \
-  log "${_filepath} ... ${FONT_GREEN}ok${FONT_NORMAL}" "[FILE][update]" || \
-  log "${_filepath} ... ${FONT_RED}failed${FONT_NORMAL}" "[FILE][update]"
+  if [[ ${_sudo} ]]; then
+    overwrite_content "${_content}" "${_tmp_dir}/`basename ${_filepath}`"
+    create_dir "`dirname ${_filepath}`" "sudo"
+    copy_file_or_dir "${_tmp_dir}/`basename ${_filepath}`" "${_filepath}" "sudo"
+    delete_pathlink "${_tmp_dir}/`basename ${_filepath}`"
+  else
+    echo "${_content}" > ${_filepath} && \
+    log "${_filepath} ... ${FONT_GREEN}ok${FONT_NORMAL}" "[FILE][update]" || \
+    log "${_filepath} ... ${FONT_RED}failed${FONT_NORMAL}" "[FILE][update]"
+  fi
 }
 
 function append_content() {

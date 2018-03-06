@@ -2,13 +2,16 @@
 . ./cmd.sh
 . ./file_and_dir.sh
 . ./sed.sh
+. ./log.sh
+
+# reference:
+# https://hk.saowen.com/a/4bcd4ff5fbdb05930119ce3c0f2d5c7b8de7200553ab5d1f85492585ee3159db
 
 TMP_DIR=`eval echo ~$USER`
 
 K8S_VERSION="v1.9.3_coreos.0"
 K8S_DNS_SERVICE_IP="8.8.8.8"
 K8S_NETWORK_PLUGIN="cni"
-K8S_CONF="/etc/kubernetes/kube_conf"
 
 K8S_TMP_KEY_DIR="${TMP_DIR}/kube-ssl"
 K8S_KEY_DIR="/etc/kubernetes/ssl"
@@ -30,6 +33,8 @@ KUBECTL_RUN="/opt/bin/${K8SCTL}"
 KUBELET_UNIT="kubelet.service"
 KUBELET_RUN="/etc/systemd/system/${KUBELET_UNIT}"
 
+KUBELET_CONF="/etc/kubernetes/kubelet.kubeconfig"
+
 KUBELET_API_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
 KUBELET_POD_MANIFEST="/etc/kubernetes/manifests/kubernetes.yaml"
 KUBELET_PROXY_MANIFEST="/etc/kubernetes/manifests/kube-proxy.yaml"
@@ -38,7 +43,8 @@ KUBELET_SCHEDULER_MANIFEST="/etc/kubernetes/manifests/kube-scheduler.yaml"
 
 function create_kube_config() {
   local _master=$1
-  local _file=${2:-$K8S_CONF}
+  local _port=${2:-8080}
+  local _conf=${3:-$KUBELET_CONF}
   local _content=`cat << EOF
 apiVersion: v1
 kind: Config
@@ -47,7 +53,6 @@ preferences: {}
 clusters:
 - cluster:
   name: scratch
-  server: https://${_master}
 
 users:
 - name: developer
@@ -61,6 +66,36 @@ contexts:
     cluster: scratch
   name: dev-two
 EOF`
+
+  overwrite_content "${_conf}" "sudo"
+}
+
+function set_kubeconfig_cluster() {
+  local _master=$1
+  local _port=$2
+  local _cluster=$3
+  local _option=${4:-}
+  local _key=${5:-$K8S_KEY_DIR/$K8S_ROOT_KEY.pem}
+  local _conf=${6:-$KUBELET_CONF}
+
+  if [ "${_option}" = "insecure" ]; then
+    sudo kubectl config --kubeconfig=${_conf} set-cluster ${_cluster} --server=https://${_master}:${_port} --insecure-skip-tls-verify && \
+    log "... ${FONT_GREEN}ok${FONT_NORMAL}" "[KUBECTL][insecure][set-cluster]" ||
+    log "... ${FONT_RED}failed${FONT_NORMAL}" "[KUBECTL][insecure][set-cluster]"
+  else
+    sudo kubectl config --kubeconfig=${_conf} set-cluster ${_cluster} --server=https://${_master}:${_port} --certificate-authority=${_key} && \
+    log "... ${FONT_GREEN}ok${FONT_NORMAL}" "[KUBECTL][secure][set-cluster]" ||
+    log "... ${FONT_RED}failed${FONT_NORMAL}" "[KUBECTL][secure][set-cluster]"
+  fi
+}
+
+function set_kubeconfig_context() {
+  local _context=$1
+  local _conf=${2:-$KUBELET_CONF}
+
+  sudo kubectl config --kubeconfig=${_conf} use-context ${_context} && \
+  log "... ${FONT_GREEN}ok${FONT_NORMAL}" "[KUBECTL][set-context]" ||
+  log "... ${FONT_RED}failed${FONT_NORMAL}" "[KUBECTL][set-context]"
 }
 
 function create_root_keys() {
@@ -106,7 +141,6 @@ function create_worker_keys() {
   local _worker_ip=$1 #ip
   local _worker_fqdn=${2:-$_worker_ip}
   local _key_conf=${3:-$KUBELET_WORKER_KEY_CONF}
-#  local _apikey=${3:-$KUBELET_API_KEY}
   local _rootkey=${4:-$KUBELET_ROOT_KEY}
   local _content=`cat << 'EOF'
 [req]
@@ -123,7 +157,6 @@ EOF
 `
 
   overwrite_content "${_content}" "${_key_conf}"
-#  replace_word_in_file "<__WORKER_IP__>" "${_worker_ip}" "${_key_conf}"
 
   openssl genrsa -out ${_worker_fqdn}-worker-key.pem 2048
 
@@ -172,9 +205,7 @@ function setup_cni_calico_network() {
 }
 EOF`
 
-  create_dir "`dirname ${_conf}`" "sudo"
-  overwrite_content "${_content}" "${TMP_DIR}/`basename ${_conf}`"
-  copy_file_or_dir "${TMP_DIR}/`basename ${_conf}`" "${_conf}" "sudo"
+  overwrite_content "${_content}" "${_conf}" "sudo"
 }
 
 function setup_cni_flannel_network() {
@@ -229,6 +260,7 @@ function setup_kubelet() {
   local _service=${2:-$KUBELET_RUN}
   local _service_file=`basename ${_service}`
   local _cni=${3:-$K8S_CNI_CALICO}
+  local _cni=${3:-$K8S_CNI_CALICO}
   local _content=`cat << 'EOF'
 [Service]
 Environment=KUBELET_IMAGE_TAG=<__K8S_VERSION__>
@@ -241,7 +273,6 @@ ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \\\
-  --api-servers=http://127.0.0.1:8080 \\\
   --cni-conf-dir=<__CNI_DIR__> \\\
   --network-plugin=<__NETWORK_PLUGIN__> \\\
   --container-runtime=docker \\\

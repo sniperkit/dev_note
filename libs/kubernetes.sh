@@ -200,7 +200,7 @@ function setup_tls_assets() {
 function setup_calico_service_unit() {
   local _etcd_ip=$1
   local _calico_unit="/etc/systemd/system/calico-node.service"
-  local _calico_unit_content=`cat << EOF
+  local _calico_unit_content=`cat << "EOF"
 [Unit]
 Description=calico node
 After=docker.service
@@ -208,23 +208,23 @@ Requires=docker.service
 
 [Service]
 User=root
-Environment=ETCD_ENDPOINTS=http://${_etcd_ip}:2379
+Environment=ETCD_ENDPOINTS=http://<__ETCD_IP__>:2379
 PermissionsStartOnly=true
-ExecStart=/usr/bin/docker run --net=host --privileged --name=calico-node \
-  -e ETCD_ENDPOINTS=${ETCD_ENDPOINTS} \
-  -e NODENAME=${HOSTNAME} \
-  -e IP= \
-  -e NO_DEFAULT_POOLS= \
-  -e AS= \
-  -e CALICO_LIBNETWORK_ENABLED=true \
-  -e IP6= \
-  -e CALICO_NETWORKING_BACKEND=bird \
-  -e FELIX_DEFAULTENDPOINTTOHOSTACTION=ACCEPT \
-  -v /var/run/calico:/var/run/calico \
-  -v /lib/modules:/lib/modules \
-  -v /run/docker/plugins:/run/docker/plugins \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v /var/log/calico:/var/log/calico \
+ExecStart=/usr/bin/docker run --net=host --privileged --name=calico-node \\
+  -e ETCD_ENDPOINTS=${ETCD_ENDPOINTS} \\
+  -e NODENAME=${HOSTNAME} \\
+  -e IP= \\
+  -e NO_DEFAULT_POOLS= \\
+  -e AS= \\
+  -e CALICO_LIBNETWORK_ENABLED=true \\
+  -e IP6= \\
+  -e CALICO_NETWORKING_BACKEND=bird \\
+  -e FELIX_DEFAULTENDPOINTTOHOSTACTION=ACCEPT \\
+  -v /var/run/calico:/var/run/calico \\
+  -v /lib/modules:/lib/modules \\
+  -v /run/docker/plugins:/run/docker/plugins \\
+  -v /var/run/docker.sock:/var/run/docker.sock \\
+  -v /var/log/calico:/var/log/calico \\
   quay.io/calico/node:v3.0.3
 ExecStop=/usr/bin/docker rm -f calico-node
 Restart=always
@@ -237,7 +237,11 @@ EOF
   create_dir "`dirname ${_calico_unit}`"
 
   overwrite_content "${_calico_unit_content}" "${_calico_unit}" "sudo"
+
+  replace_word_in_file "<__ETCD_IP__>" "${_etcd_ip}" "${_calico_unit}" "sudo"
+
   sudo systemctl daemon-reload
+  sudo systemctl stop calico-node
   sudo systemctl start calico-node
 }
 
@@ -259,9 +263,11 @@ function setup_cni_calico_plugin() {
     "cniVersion": "0.1.0",
     "type": "calico",
     "etcd_endpoints": "http://${_etcd_host}:2379",
-    "log_level": "info",
+    "log_level": "DEBUG",
     "ipam": {
-        "type": "calico-ipam"
+        "type": "calico-ipam",
+        "assign_ipv4": "true",
+        "ipv4_pools": ["192.168.0.0/16"]
     },
     "policy": {
         "type": "k8s"
@@ -353,7 +359,7 @@ ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \\
   --kubeconfig=<__KUBECONFIG__> \\
-  --cni-conf-dir=<__CNI_CONF__>/net.d \\
+  --cni-conf-dir=<__CNI_CONF__> \\
   --cni-bin-dir=<__CNI_BIN__> \\
   --network-plugin=<__NETWORK_PLUGIN__> \\
   --container-runtime=docker \\
@@ -763,9 +769,14 @@ function get_connection_state() {
   kubectl get cs
 }
 
+function test_k8s_deploy() {
+  kubectl run my-nginx --image=nginx --replicas=2 --port=80
+  kubectl delete deployment my-nginx
+}
+
 #----[ SETUP ]----#
-#setup_calico_service_unit "$1"
-#setup_cni_calico_plugin "$1"
+setup_calico_service_unit "$2"
+setup_cni_calico_plugin "$1"
 #setup_cni_lo_plugin
 
 #setup_tls_assets "$1"
@@ -785,6 +796,7 @@ function get_connection_state() {
 #create_kubelet_policy_controller_manifest "$2"
 
 #setup_kubelet "$1"
+#kubectl create -f /etc/kubernetes/manifests/calico-kube-controllers.yaml
 
 #----[ DELETE ]----#
 #pod_name=`kubectl --namespace kube-system get pods | grep dashboard | cut -d' ' -f1`

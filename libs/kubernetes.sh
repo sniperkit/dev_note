@@ -6,6 +6,8 @@
 
 # reference:
 # https://hk.saowen.com/a/4bcd4ff5fbdb05930119ce3c0f2d5c7b8de7200553ab5d1f85492585ee3159db
+# https://wiki.mikejung.biz/Kubernetes
+# https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/
 
 TMP_DIR=`eval echo ~$USER`
 
@@ -319,7 +321,7 @@ spec:
     - apiserver
     - --bind-address=0.0.0.0
     - --secure-port=${KUBELET_API_SECURE_PORT}
-    - --insecure-bind-address=${_master_host}
+    - --insecure-bind-address=0.0.0.0
     - --insecure-port=${KUBELET_API_INSECURE_PORT}
     - --etcd-servers=http://${_etcd_host}:2379
     - --allow-privileged=true

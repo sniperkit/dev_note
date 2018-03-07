@@ -26,7 +26,7 @@
       {
         "dropins": [
           {
-            "contents": "[Unit]\nRequires=coreos-metadata.service\nAfter=coreos-metadata.service\n\n[Service]\nEnvironmentFile=/run/metadata/coreos\nExecStart=\nExecStart=/usr/lib/coreos/etcd-wrapper $ETCD_OPTS \\\n  --listen-peer-urls=\"http://${COREOS_GCE_IP_LOCAL_0}:2380\" \\\n  --listen-client-urls=\"http://0.0.0.0:2379\" \\\n  --initial-advertise-peer-urls=\"http://${COREOS_GCE_IP_LOCAL_0}:2380\" \\\n  --advertise-client-urls=\"http://${COREOS_GCE_IP_LOCAL_0}:2379\" \\\n  --discovery=\"https://discovery.etcd.io/\u003ctoken\u003e\"",
+            "contents": "[Service]\nExecStart=\nExecStart=/usr/lib/coreos/etcd-wrapper $ETCD_OPTS \\\n  --name=\"demo-etcd-1\" \\\n  --listen-peer-urls=\"http://0.0.0.0:2380\" \\\n  --listen-client-urls=\"http://10.240.0.1:2379,http://0.0.0.0:4001\" \\\n  --initial-advertise-peer-urls=\"http://10.240.0.1:2380\" \\\n  --initial-cluster=\"demo-etcd-1=http://10.240.0.1:2380,demo-etcd-2=http://10.240.0.2:2380,demo-etcd-3=http://10.240.0.3:2380\" \\\n  --initial-cluster-state=\"new\" \\\n  --initial-cluster-token=\"demo-etcd-token\" \\\n  --advertise-client-urls=\"http://10.240.0.1:2379\"",
             "name": "20-clct-etcd-member.conf"
           }
         ],
@@ -34,5 +34,6 @@
         "name": "etcd-member.service"
       }
     ]
-  }
+  },
+  "_comment": "https://coreos.com/etcd/docs/latest/etcd-live-cluster-reconfiguration.html"
 }

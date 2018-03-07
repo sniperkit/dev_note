@@ -1,7 +1,5 @@
 . ./cmd.sh
 
-COREOS_INIT_CONF=""
-
 function install_coreos() {
   local _conf=$1
   local _extension=`echo ${_conf} | cut -d'.' -f2`

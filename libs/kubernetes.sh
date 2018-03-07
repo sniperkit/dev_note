@@ -9,6 +9,7 @@
 # https://wiki.mikejung.biz/Kubernetes
 # https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/
 # https://coreos.com/tectonic/docs/latest/tutorials/kubernetes/getting-started.html
+# https://docs.projectcalico.org/v3.0/getting-started/kubernetes/installation/integration
 
 TMP_DIR=`eval echo ~$USER`
 
@@ -29,20 +30,26 @@ K8S_API_KEY="apiserver"
 K8S_WORKER_KEY_CONF="worker-openssl.cnf"
 #K8S_WORKER_KEY="<__FQDN__>"
 
-K8S_CNI_CALICO="/etc/kubernetes/cni/net.d/10-calico.conf"
+K8S_CALICO_CONF="/etc/kubernetes/cni/net.d/10-calico.conf"
+K8S_CNI_BIN="/etc/kubernetes/cni"
 
 KUBECTL_DOWNLOAD="https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubectl"
 KUBECTL_RUN="/opt/bin/kubectl"
+
+KUBEADM_DOWNLOAD="https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubeadm"
+KUBEADM_RUN="/opt/bin/kubeadm"
 
 KUBELET_UNIT="/etc/systemd/system/kubelet.service"
 
 KUBELET_CONF="/etc/kubernetes/kubelet.kubeconfig"
 
+CALICO_KUBE_CONTROLLER_MANIFEST="/etc/kubernetes/manifests/calico-kube-controllers.yaml"
 KUBELET_API_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
 KUBELET_POD_MANIFEST="/etc/kubernetes/manifests/kubernetes.yaml"
 KUBELET_PROXY_MANIFEST="/etc/kubernetes/manifests/kube-proxy.yaml"
 KUBELET_CONTROLLER_MANIFEST="/etc/kubernetes/manifests/kube-controller-manager.yaml"
 KUBELET_SCHEDULER_MANIFEST="/etc/kubernetes/manifests/kube-scheduler.yaml"
+KUBELET_POLICY_CONTROLLER_MANIFEST="/etc/kubernetes/manifests/kube-policy-controller.yaml"
 
 KUBELET_API_SECURE_PORT=6443
 KUBELET_API_INSECURE_PORT=8080
@@ -70,7 +77,7 @@ contexts:
   name: dev-two
 EOF`
 
-  overwrite_content "${KUBELET_CONF}" "sudo"
+  overwrite_content "${_content}" "${KUBELET_CONF}" "sudo"
 }
 
 function set_kubeconfig_cluster() {
@@ -80,14 +87,14 @@ function set_kubeconfig_cluster() {
 
   if [ "${_option}" = "insecure" ]; then
     sudo kubectl config --kubeconfig=${KUBELET_CONF} set-cluster ${_cluster} \
-    --server=https://${_master}:${KUBELET_API_SECURE_PORT} \
+    --server=http://${_master}:${KUBELET_API_INSECURE_PORT} \
     --insecure-skip-tls-verify && \
     log "... ${FONT_GREEN}ok${FONT_NORMAL}" "[KUBECTL][insecure][set-cluster]" ||
     log "... ${FONT_RED}failed${FONT_NORMAL}" "[KUBECTL][insecure][set-cluster]"
   else
     sudo kubectl config --kubeconfig=${KUBELET_CONF} set-cluster ${_cluster} \
-    --server=https://${_master}:${KUBELET_API_SECURE_PORT} \
-    --certificate-authority=${K8S_KEY_DIR}/${K8S_ROOT_KEY.pem} && \
+    --server=http://${_master}:${KUBELET_API_INSECURE_PORT} \
+    --certificate-authority=${K8S_KEY_DIR}/${K8S_ROOT_KEY}.pem && \
     log "... ${FONT_GREEN}ok${FONT_NORMAL}" "[KUBECTL][secure][set-cluster]" ||
     log "... ${FONT_RED}failed${FONT_NORMAL}" "[KUBECTL][secure][set-cluster]"
   fi
@@ -190,13 +197,66 @@ function setup_tls_assets() {
   popd
 }
 
-function setup_cni_calico_network() {
+function setup_calico_service_unit() {
+  local _etcd_ip=$1
+  local _calico_unit="/etc/systemd/system/calico-node.service"
+  local _calico_unit_content=`cat << EOF
+[Unit]
+Description=calico node
+After=docker.service
+Requires=docker.service
+
+[Service]
+User=root
+Environment=ETCD_ENDPOINTS=http://${_etcd_ip}:2379
+PermissionsStartOnly=true
+ExecStart=/usr/bin/docker run --net=host --privileged --name=calico-node \
+  -e ETCD_ENDPOINTS=${ETCD_ENDPOINTS} \
+  -e NODENAME=${HOSTNAME} \
+  -e IP= \
+  -e NO_DEFAULT_POOLS= \
+  -e AS= \
+  -e CALICO_LIBNETWORK_ENABLED=true \
+  -e IP6= \
+  -e CALICO_NETWORKING_BACKEND=bird \
+  -e FELIX_DEFAULTENDPOINTTOHOSTACTION=ACCEPT \
+  -v /var/run/calico:/var/run/calico \
+  -v /lib/modules:/lib/modules \
+  -v /run/docker/plugins:/run/docker/plugins \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /var/log/calico:/var/log/calico \
+  quay.io/calico/node:v3.0.3
+ExecStop=/usr/bin/docker rm -f calico-node
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+`
+  create_dir "`dirname ${_calico_unit}`"
+
+  overwrite_content "${_calico_unit_content}" "${_calico_unit}" "sudo"
+  sudo systemctl daemon-reload
+  sudo systemctl start calico-node
+}
+
+function setup_cni_calico_plugin() {
   # Calico secures the overlay network by restricting traffic to/from the pods based on fine-grained network policy.
   local _etcd_host=$1 #ip
+
+  local _calico_download="https://github.com/projectcalico/cni-plugin/releases/download/v2.0.1/calico"
+  local _calico_ipam_download="https://github.com/projectcalico/cni-plugin/releases/download/v2.0.1/calico-ipam"
+
+  sudo wget -N -P ${K8S_CNI_BIN} ${_calico_download}
+  sudo wget -N -P ${K8S_CNI_BIN} ${_calico_ipam_download}
+  set_permission "+x" "${K8S_CNI_BIN}/calico" "sudo"
+  set_permission "+x" "${K8S_CNI_BIN}/calico-ipam" "sudo"
 
   local _content=`cat << EOF
 {
     "name": "calico-k8s-network",
+    "cniVersion": "0.1.0",
     "type": "calico",
     "etcd_endpoints": "http://${_etcd_host}:2379",
     "log_level": "info",
@@ -205,11 +265,21 @@ function setup_cni_calico_network() {
     },
     "policy": {
         "type": "k8s"
+    },
+    "kubernetes": {
+        "kubeconfig": "${KUBELET_CONF}"
     }
 }
 EOF`
 
-  overwrite_content "${_content}" "${K8S_CNI_CALICO}" "sudo"
+  overwrite_content "${_content}" "${K8S_CALICO_CONF}" "sudo"
+}
+
+function setup_cni_lo_plugin() {
+  # In addition to the CNI plugin specified by the CNI config file, Kubernetes requires the standard CNI loopback plugin.
+  wget https://github.com/containernetworking/cni/releases/download/v0.3.0/cni-v0.3.0.tgz
+  tar -zxvf cni-v0.3.0.tgz
+  sudo cp loopback ${K8S_CNI_BIN}
 }
 
 function setup_cni_flannel_network() {
@@ -237,11 +307,6 @@ EOF
   etcdctl set /coreos.com/network/config "{\"Network\":\"10.12.0.0/16\",\"Backend\":{\"Type\":\"vxlan\"}}"
 }
 
-function setup_kubeadm() {
-#  the command to bootstrap the cluster.
-  :
-}
-
 function setup_kubecli() {
 #  the command line util to talk to your cluster.
 
@@ -251,11 +316,21 @@ function setup_kubecli() {
   run_and_validate_cmd "sudo mkdir -p `dirname ${KUBECTL_RUN}`"
   run_and_validate_cmd "sudo curl ${KUBECTL_DOWNLOAD} -o ${KUBECTL_RUN}"
   run_and_validate_cmd "sudo chmod +x ${KUBECTL_RUN}"
-#  run_and_validate_cmd "sudo mkdir -p `dirname ${KUBECTL_RUN}`"
-#  run_and_validate_cmd "sudo mv ${KUBECTL} ${KUBECTL_RUN}"
   popd
 
   export KUBERNETES_MASTER=http://${_master}:${KUBELET_API_INSECURE_PORT}
+}
+
+function setup_kubeadm() {
+#  the command to bootstrap the cluster.
+
+  pushd ~
+  run_and_validate_cmd "sudo mkdir -p `dirname ${KUBEADM_RUN}`"
+  run_and_validate_cmd "sudo curl ${KUBEADM_DOWNLOAD} -o ${KUBEADM_RUN}"
+  run_and_validate_cmd "sudo chmod +x ${KUBEADM_RUN}"
+#  run_and_validate_cmd "sudo mkdir -p `dirname ${KUBECTL_RUN}`"
+#  run_and_validate_cmd "sudo mv ${KUBECTL} ${KUBECTL_RUN}"
+  popd
 }
 
 function setup_kubelet() {
@@ -264,7 +339,7 @@ function setup_kubelet() {
 # The component that runs on all of the machines in your cluster and does things like starting pods and containers.
 
   local _master_ip=$1
-  local _cni_dir=`dirname ${K8S_CNI_CALICO}`
+  local _calico_dir=`dirname ${K8S_CALICO_CONF}`
   local _content=`cat << "EOF"
 [Service]
 Environment=KUBELET_IMAGE_TAG=<__K8S_VERSION__>_coreos.0
@@ -278,7 +353,8 @@ ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \\
   --kubeconfig=<__KUBECONFIG__> \\
-  --cni-conf-dir=<__CNI_DIR__> \\
+  --cni-conf-dir=<__CNI_CONF__>/net.d \\
+  --cni-bin-dir=<__CNI_BIN__> \\
   --network-plugin=<__NETWORK_PLUGIN__> \\
   --container-runtime=docker \\
   --allow-privileged=true \\
@@ -296,7 +372,8 @@ EOF
 `
 
   local _escaped_kubelet_conf=`escape_forward_slash "${KUBELET_CONF}"`
-  local _escaped_cni=`escape_forward_slash "${_cni_dir}"`
+  local _escaped_calico=`escape_forward_slash "${_calico_dir}"`
+  local _escaped_cni=`escape_forward_slash "${K8S_CNI_BIN}"`
 
   overwrite_content "${_content}" "${KUBELET_UNIT}" "sudo"
 
@@ -305,7 +382,42 @@ EOF
   replace_word_in_file "<__DNS_SERVICE_IP__>" "10.13.0.10" "${KUBELET_UNIT}" "sudo"
   replace_word_in_file "<__NETWORK_PLUGIN__>" "${K8S_NETWORK_PLUGIN}" "${KUBELET_UNIT}" "sudo"
   replace_word_in_file "<__KUBECONFIG__>" "${_escaped_kubelet_conf}" "${KUBELET_UNIT}" "sudo"
-  replace_word_in_file "<__CNI_DIR__>" "${_escaped_cni}" "${KUBELET_UNIT}" "sudo"
+  replace_word_in_file "<__CNI_CONF__>" "${_escaped_calico}" "${KUBELET_UNIT}" "sudo"
+  replace_word_in_file "<__CNI_BIN__>" "${_escaped_cni}" "${KUBELET_UNIT}" "sudo"
+}
+
+function create_calico_kube_controllers_manifest() {
+  local _etcd_host=$1
+
+  local _content=`cat << EOF
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: calico-kube-controllers
+  namespace: kube-system
+  labels:
+    k8s-app: calico-kube-controllers
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      name: calico-kube-controllers
+      namespace: kube-system
+      labels:
+        k8s-app: calico-kube-controllers
+    spec:
+      hostNetwork: true
+      containers:
+        - name: calico-kube-controllers
+          image: quay.io/calico/kube-controllers:v2.0.1
+          env:
+            - name: ETCD_ENDPOINTS
+              value: "http://${_etcd_host}:2379"
+EOF`
+
+  overwrite_content "${_content}" "${CALICO_KUBE_CONTROLLER_MANIFEST}" "sudo"
 }
 
 function create_kubelet_api_manifest() {
@@ -489,7 +601,7 @@ spec:
     name: ssl-certs-host
 EOF`
 
-  overwrite_content "${_content}" "${KUBELET_PROXY_MANIFEST}"
+  overwrite_content "${_content}" "${KUBELET_PROXY_MANIFEST}" "sudo"
 }
 
 function create_kubelet_controller_manifest() {
@@ -542,7 +654,7 @@ spec:
     name: ssl-certs-host
 EOF`
 
-  overwrite_content "${_content}" "${KUBELET_CONTROLLER_MANIFEST}"
+  overwrite_content "${_content}" "${KUBELET_CONTROLLER_MANIFEST}" "sudo"
 }
 
 function create_kubelet_scheduler_manifest() {
@@ -579,17 +691,108 @@ EOF`
   overwrite_content "${_content}" "${KUBELET_SCHEDULER_MANIFEST}" "sudo"
 }
 
+function create_kubelet_policy_controller_manifest() {
+  # Implements the Kubernetes NetworkPolicy API by watching the Kubernetes API for Pod, Namespace,
+  # and NetworkPolicy events and configuring Calico in response. It runs as a single pod managed by a ReplicaSet.
+  local _etcd_host=$1
+
+  local _content=`cat << EOF
+apiVersion: extensions/v1beta1
+kind: ReplicaSet
+metadata:
+  name: calico-policy-controller
+  namespace: kube-system
+  labels:
+    k8s-app: calico-policy
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: calico-policy-controller
+      namespace: kube-system
+      labels:
+        k8s-app: calico-policy
+    spec:
+      hostNetwork: true
+      containers:
+        - name: calico-policy-controller
+          # Make sure to pin this to your desired version.
+          image: calico/kube-policy-controller:v0.3.0
+          env:
+            - name: ETCD_ENDPOINTS
+              value: "http://${_etcd_host}:2379"
+            - name: K8S_API
+              value: "https://kubernetes.default:443"
+            - name: CONFIGURE_ETC_HOSTS
+              value: "true"
+EOF`
+
+  overwrite_content "${_content}" "${KUBELET_POLICY_CONTROLLER_MANIFEST}" "sudo"
+}
+
+function setup_kube_gui() {
+  local _master=$1
+
+  local _dashboard_download="https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml"
+
+  kubectl create -f ${_dashboard_download}
+  kubectl proxy --address="${_master}" --port=9090 --accept-hosts='^*$'&
+}
+
+function get_k8s_resource_info() {
+  #pod
+  #deployment
+  #service
+  #rolebindings.rbac.authorization.k8s.io
+  #roles.rbac.authorization.k8s.io
+  #serviceaccounts
+  #secrets
+  local _resource=$1
+
+  kubectl --namespace kube-system get ${_resource}
+}
+
+function delete_k8s_resource() {
+  local _resource=$1
+  local _name=$2
+
+  kubectl --namespace kube-system delete ${_resource} ${_name}
+}
+
 function get_connection_state() {
   kubectl get cs
 }
 
-#setup_cni_calico_network "$1"
+#----[ SETUP ]----#
+#setup_calico_service_unit "$1"
+#setup_cni_calico_plugin "$1"
+#setup_cni_lo_plugin
+
 #setup_tls_assets "$1"
+
+#setup_kubecli "$1"
+#setup_kubeadm
+
+#create_kube_config
 #set_kubeconfig_cluster "$1" "scratch"
 #set_kubeconfig_context "dev-one"
+
+#create_calico_kube_controllers_manifest "$2"
 #create_kubelet_api_manifest "$1" "$2"
 #create_kubelet_proxy_manifest "$1"
 #create_kubelet_controller_manifest "$1"
 #create_kubelet_scheduler_manifest "$1"
+#create_kubelet_policy_controller_manifest "$2"
+
 #setup_kubelet "$1"
-#setup_kubecli "$1"
+
+#----[ DELETE ]----#
+#pod_name=`kubectl --namespace kube-system get pods | grep dashboard | cut -d' ' -f1`
+#
+#delete_k8s_resource "deployment" "kubernetes-dashboard"
+#delete_k8s_resource "services" "kubernetes-dashboard"
+#delete_k8s_resource "secrets" "kubernetes-dashboard-certs"
+#delete_k8s_resource "serviceaccounts" "kubernetes-dashboard"
+#delete_k8s_resource "roles.rbac.authorization.k8s.io" "kubernetes-dashboard-minimal"
+#delete_k8s_resource "rolebindings.rbac.authorization.k8s.io" "kubernetes-dashboard-minimal"
+#delete_k8s_resource "pods" "${pod_name}"

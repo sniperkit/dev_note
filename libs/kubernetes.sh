@@ -8,10 +8,12 @@
 # https://hk.saowen.com/a/4bcd4ff5fbdb05930119ce3c0f2d5c7b8de7200553ab5d1f85492585ee3159db
 # https://wiki.mikejung.biz/Kubernetes
 # https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/
+# https://coreos.com/tectonic/docs/latest/tutorials/kubernetes/getting-started.html
 
 TMP_DIR=`eval echo ~$USER`
 
-K8S_VERSION="v1.9.3_coreos.0"
+#K8S_VERSION="v1.9.3_coreos.0"
+K8S_VERSION=`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`
 K8S_DNS_SERVICE_IP="8.8.8.8"
 K8S_NETWORK_PLUGIN="cni"
 
@@ -29,7 +31,7 @@ K8S_WORKER_KEY_CONF="worker-openssl.cnf"
 
 K8S_CNI_CALICO="/etc/kubernetes/cni/net.d/10-calico.conf"
 
-KUBECTL_DOWNLOAD="https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/kubectl"
+KUBECTL_DOWNLOAD="https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubectl"
 KUBECTL_RUN="/opt/bin/kubectl"
 
 KUBELET_UNIT="/etc/systemd/system/kubelet.service"
@@ -173,15 +175,15 @@ function setup_tls_assets() {
   local _master=$1
 
   create_dir "${K8S_TMP_KEY_DIR}"
-  create_dir "${K8S_KEY_DIR}"
+  create_dir "${K8S_KEY_DIR}" "sudo"
 
-  pushd ${K8S_TMP_KEY_DIR}}
+  pushd ${K8S_TMP_KEY_DIR}
 
   create_root_keys
   create_api_server_keys ${_master}
 #  create_worker_keys ${_worker}
 
-  sudo cp ${K8S_TMP_KEY_DIR}}/*.pem ${K8S_KEY_DIR}/
+  sudo cp ${K8S_TMP_KEY_DIR}/*.pem ${K8S_KEY_DIR}/
   set_permission "600" "${K8S_KEY_DIR}/*-key.pem" "sudo"
   set_ownership "root" "root" "${K8S_KEY_DIR}/*-key.pem" "sudo"
 
@@ -189,6 +191,7 @@ function setup_tls_assets() {
 }
 
 function setup_cni_calico_network() {
+  # Calico secures the overlay network by restricting traffic to/from the pods based on fine-grained network policy.
   local _etcd_host=$1 #ip
 
   local _content=`cat << EOF
@@ -210,14 +213,15 @@ EOF`
 }
 
 function setup_cni_flannel_network() {
-  local _master=$1 #ip
+  local _master_host=$1 #ip
+  local _etcd_host=$2 #2
   local _flannel_config="/etc/flannel/options.env"
   local _flannel_config_content=`cat << EOF
-FLANNELD_IFACE=${_master}
-FLANNELD_ETCD_ENDPOINTS=http://${_master}:2379
+FLANNELD_IFACE=${_master_host}
+FLANNELD_ETCD_ENDPOINTS=http://${_etcd_host}:2379
 EOF
 `
-  local _flannel_unit="/etc/systemd/system/flanneld.service.d"
+  local _flannel_unit="/etc/systemd/system/flanneld.service.d/40-ExecStartPre-symlink.conf"
   local _flannel_unit_content=`cat << EOF
 [Service]
 ExecStartPre=/usr/bin/ln -sf /etc/flannel/options.env /run/flannel/options.env
@@ -244,23 +248,26 @@ function setup_kubecli() {
   local _master=$1
 
   pushd ~
-  run_and_validate_cmd "curl ${KUBECTL_DOWNLOAD} -o ${KUBECTL}"
-  run_and_validate_cmd "sudo chmod +x ${KUBECTL}"
   run_and_validate_cmd "sudo mkdir -p `dirname ${KUBECTL_RUN}`"
-  run_and_validate_cmd "sudo mv ${KUBECTL} ${KUBECTL_RUN}"
+  run_and_validate_cmd "sudo curl ${KUBECTL_DOWNLOAD} -o ${KUBECTL_RUN}"
+  run_and_validate_cmd "sudo chmod +x ${KUBECTL_RUN}"
+#  run_and_validate_cmd "sudo mkdir -p `dirname ${KUBECTL_RUN}`"
+#  run_and_validate_cmd "sudo mv ${KUBECTL} ${KUBECTL_RUN}"
   popd
 
   export KUBERNETES_MASTER=http://${_master}:${KUBELET_API_INSECURE_PORT}
 }
 
 function setup_kubelet() {
-#  the component that runs on all of the machines in your cluster and does things like starting pods and containers.
+# The kubelet is the agent on each machine that starts and stops Pods and other machine-level tasks.
+# The kubelet communicates with the API server (also running on the master nodes) with the TLS certificates
+# The component that runs on all of the machines in your cluster and does things like starting pods and containers.
 
   local _master_ip=$1
   local _cni_dir=`dirname ${K8S_CNI_CALICO}`
   local _content=`cat << "EOF"
 [Service]
-Environment=KUBELET_IMAGE_TAG=<__K8S_VERSION__>
+Environment=KUBELET_IMAGE_TAG=<__K8S_VERSION__>_coreos.0
 Environment="RKT_RUN_ARGS=--uuid-file-save=/var/run/kubelet-pod.uuid \\
   --volume var-log,kind=host,source=/var/log \\
   --mount volume=var-log,target=/var/log \\
@@ -295,13 +302,15 @@ EOF
 
   replace_word_in_file "<__K8S_VERSION__>" "${K8S_VERSION}" "${KUBELET_UNIT}" "sudo"
   replace_word_in_file "<__MASTER_IP__>" "${_master_ip}" "${KUBELET_UNIT}" "sudo"
-  replace_word_in_file "<__DNS_SERVICE_IP__>" "${_master_ip}" "${KUBELET_UNIT}" "sudo"
+  replace_word_in_file "<__DNS_SERVICE_IP__>" "10.13.0.10" "${KUBELET_UNIT}" "sudo"
   replace_word_in_file "<__NETWORK_PLUGIN__>" "${K8S_NETWORK_PLUGIN}" "${KUBELET_UNIT}" "sudo"
   replace_word_in_file "<__KUBECONFIG__>" "${_escaped_kubelet_conf}" "${KUBELET_UNIT}" "sudo"
   replace_word_in_file "<__CNI_DIR__>" "${_escaped_cni}" "${KUBELET_UNIT}" "sudo"
 }
 
 function create_kubelet_api_manifest() {
+# The API server is where most of the magic happens. It is stateless by design and takes in API requests,
+# processes them and stores the result in etcd if needed, and then returns the result of the request.
   local _master_host=$1 #ip
   local _etcd_host=$2 #ip
 
@@ -315,7 +324,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-apiserver
-    image: quay.io/coreos/hyperkube:${K8S_VERSION}
+    image: quay.io/coreos/hyperkube:${K8S_VERSION}_coreos.0
     command:
     - /hyperkube
     - apiserver
@@ -323,7 +332,7 @@ spec:
     - --secure-port=${KUBELET_API_SECURE_PORT}
     - --insecure-bind-address=0.0.0.0
     - --insecure-port=${KUBELET_API_INSECURE_PORT}
-    - --etcd-servers=http://${_etcd_host}:2379
+    - --etcd-servers=http://${_master_host}:2379
     - --allow-privileged=true
     - --service-cluster-ip-range=10.13.0.0/24
     - --secure-port=443
@@ -362,6 +371,8 @@ EOF`
 }
 
 function create_kubelet_pod_manifest() {
+  # might not be required
+
   local _master_host=$1 #ip
   local _etcd_host=$2 #ip
   local _content=`cat << EOF
@@ -447,6 +458,8 @@ EOF`
 }
 
 function create_kubelet_proxy_manifest() {
+# The proxy is responsible for directing traffic destined for specific services and pods to the correct location.
+# The proxy communicates with the API server periodically to keep up to date.
   local _master_host=$1
   local _content=`cat << EOF
 apiVersion: v1
@@ -458,7 +471,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-proxy
-    image: quay.io/coreos/hyperkube:${K8S_VERSION}
+    image: quay.io/coreos/hyperkube:${K8S_VERSION}_coreos.0
     command:
     - /hyperkube
     - proxy
@@ -480,6 +493,13 @@ EOF`
 }
 
 function create_kubelet_controller_manifest() {
+# The controller manager is responsible for reconciling any required actions based on changes to Replication
+# Controllers.
+
+# For example, if you increased the replica count, the controller manager would generate a scale up event,
+# which would cause a new Pod to get scheduled in the cluster. The controller manager communicates with the
+# API to submit these events.
+
   local _master_host=$1
   local _content=`cat << EOF
 apiVersion: v1
@@ -491,7 +511,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-controller-manager
-    image: quay.io/coreos/hyperkube:${K8S_VERSION}
+    image: quay.io/coreos/hyperkube:${K8S_VERSION}_coreos.0
     command:
     - /hyperkube
     - controller-manager
@@ -526,6 +546,9 @@ EOF`
 }
 
 function create_kubelet_scheduler_manifest() {
+# The scheduler monitors the API for unscheduled pods, finds them a machine to run on, and communicates
+# the decision back to the API.
+
   local _master=$1
 
   local _content=`cat << EOF
@@ -538,7 +561,7 @@ spec:
   hostNetwork: true
   containers:
   - name: kube-scheduler
-    image: quay.io/coreos/hyperkube:${K8S_VERSION}
+    image: quay.io/coreos/hyperkube:${K8S_VERSION}_coreos.0
     command:
     - /hyperkube
     - scheduler
@@ -556,13 +579,17 @@ EOF`
   overwrite_content "${_content}" "${KUBELET_SCHEDULER_MANIFEST}" "sudo"
 }
 
+function get_connection_state() {
+  kubectl get cs
+}
 
 #setup_cni_calico_network "$1"
+#setup_tls_assets "$1"
 #set_kubeconfig_cluster "$1" "scratch"
 #set_kubeconfig_context "dev-one"
 #create_kubelet_api_manifest "$1" "$2"
-#create_kubelet_pod_manifest "$1" "$2"
 #create_kubelet_proxy_manifest "$1"
 #create_kubelet_controller_manifest "$1"
 #create_kubelet_scheduler_manifest "$1"
 #setup_kubelet "$1"
+#setup_kubecli "$1"

@@ -12,3 +12,7 @@ function install_coreos() {
 
   # journalctl -t ignition
 }
+
+function get_discovery_token() {
+  curl https://discovery.etcd.io/new
+}

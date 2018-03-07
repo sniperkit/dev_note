@@ -26,7 +26,7 @@
       {
         "dropins": [
           {
-            "contents": "[Service]\nExecStart=\nExecStart=/usr/lib/coreos/etcd-wrapper $ETCD_OPTS \\\n  --name=\"demo-etcd-1\" \\\n  --listen-peer-urls=\"http://0.0.0.0:2380\" \\\n  --listen-client-urls=\"http://10.240.0.1:2379,http://0.0.0.0:4001\" \\\n  --initial-advertise-peer-urls=\"http://10.240.0.1:2380\" \\\n  --initial-cluster=\"demo-etcd-1=http://10.240.0.1:2380,demo-etcd-2=http://10.240.0.2:2380,demo-etcd-3=http://10.240.0.3:2380\" \\\n  --initial-cluster-state=\"new\" \\\n  --initial-cluster-token=\"demo-etcd-token\" \\\n  --advertise-client-urls=\"http://10.240.0.1:2379\"",
+            "contents": "[Service]\nExecStart=\nExecStart=/usr/lib/coreos/etcd-wrapper $ETCD_OPTS \\\n  --listen-peer-urls=\"http://\u003cPEER_ADDRESS\u003e:2380\" \\\n  --listen-client-urls=\"http://0.0.0.0:2379,http://0.0.0.0:4001\" \\\n  --initial-advertise-peer-urls=\"http://\u003cPEER_ADDRESS\u003e:2380\" \\\n  --advertise-client-urls=\"http://\u003cPEER_ADDRESS\u003e:2379,http://\u003cPEER_ADDRESS\u003e:4001\" \\\n  --discovery=\"https://discovery.etcd.io/\u003ctoken\u003e\"",
             "name": "20-clct-etcd-member.conf"
           }
         ],

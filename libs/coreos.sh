@@ -14,5 +14,5 @@ function install_coreos() {
 }
 
 function get_discovery_token() {
-  curl https://discovery.etcd.io/new
+  curl https://discovery.etcd.io/new | rev | cut -d'/' -f1 | rev
 }

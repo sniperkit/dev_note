@@ -10,6 +10,7 @@
 # https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/
 # https://coreos.com/tectonic/docs/latest/tutorials/kubernetes/getting-started.html
 # https://docs.projectcalico.org/v3.0/getting-started/kubernetes/installation/integration
+# https://kubernetes.io/docs/tutorials/stateless-application/expose-external-ip-address/
 
 TMP_DIR=`eval echo ~$USER`
 
@@ -43,13 +44,14 @@ KUBELET_UNIT="/etc/systemd/system/kubelet.service"
 
 KUBELET_CONF="/etc/kubernetes/kubelet.kubeconfig"
 
-CALICO_KUBE_CONTROLLER_MANIFEST="/etc/kubernetes/manifests/calico-kube-controllers.yaml"
-KUBELET_API_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
-KUBELET_POD_MANIFEST="/etc/kubernetes/manifests/kubernetes.yaml"
-KUBELET_PROXY_MANIFEST="/etc/kubernetes/manifests/kube-proxy.yaml"
-KUBELET_CONTROLLER_MANIFEST="/etc/kubernetes/manifests/kube-controller-manager.yaml"
-KUBELET_SCHEDULER_MANIFEST="/etc/kubernetes/manifests/kube-scheduler.yaml"
-KUBELET_POLICY_CONTROLLER_MANIFEST="/etc/kubernetes/manifests/kube-policy-controller.yaml"
+K8S_MANIFEST_DIR="/etc/kubernetes/manifests"
+CALICO_KUBE_CONTROLLER_MANIFEST="${K8S_MANIFEST_DIR}/calico-kube-controllers.yaml"
+KUBELET_API_MANIFEST="${K8S_MANIFEST_DIR}/kube-apiserver.yaml"
+KUBELET_POD_MANIFEST="${K8S_MANIFEST_DIR}/kubernetes.yaml"
+KUBELET_PROXY_MANIFEST="${K8S_MANIFEST_DIR}/kube-proxy.yaml"
+KUBELET_CONTROLLER_MANIFEST="${K8S_MANIFEST_DIR}/kube-controller-manager.yaml"
+KUBELET_SCHEDULER_MANIFEST="${K8S_MANIFEST_DIR}/kube-scheduler.yaml"
+KUBELET_POLICY_CONTROLLER_MANIFEST="${K8S_MANIFEST_DIR}/kube-policy-controller.yaml"
 
 KUBELET_API_SECURE_PORT=6443
 KUBELET_API_INSECURE_PORT=8080
@@ -267,7 +269,7 @@ function setup_cni_calico_plugin() {
     "ipam": {
         "type": "calico-ipam",
         "assign_ipv4": "true",
-        "ipv4_pools": ["192.168.0.0/16"]
+        "ipv4_pools": ["192.168.201.0/24"]
     },
     "policy": {
         "type": "k8s"
@@ -283,9 +285,11 @@ EOF`
 
 function setup_cni_lo_plugin() {
   # In addition to the CNI plugin specified by the CNI config file, Kubernetes requires the standard CNI loopback plugin.
-  wget https://github.com/containernetworking/cni/releases/download/v0.3.0/cni-v0.3.0.tgz
+  wget https://github.com/containernetworking/cni/releases/download/v0.3.0/cni-v0.3.0.tgz -P ${TMP_DIR}/cni
+  pushd ${TMP_DIR}/cni
   tar -zxvf cni-v0.3.0.tgz
   sudo cp loopback ${K8S_CNI_BIN}
+  popd
 }
 
 function setup_cni_flannel_network() {
@@ -354,7 +358,7 @@ Environment="RKT_RUN_ARGS=--uuid-file-save=/var/run/kubelet-pod.uuid \\
   --mount volume=var-log,target=/var/log \\
   --volume dns,kind=host,source=/etc/resolv.conf \\
   --mount volume=dns,target=/etc/resolv.conf" \\
-ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+ExecStartPre="/usr/bin/mkdir -p /etc/kubernetes/manifests"
 ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \\
@@ -452,7 +456,8 @@ spec:
     - --insecure-port=${KUBELET_API_INSECURE_PORT}
     - --etcd-servers=http://${_master_host}:2379
     - --allow-privileged=true
-    - --service-cluster-ip-range=10.13.0.0/24
+#    - --service-cluster-ip-range=10.13.0.0/24
+    - --service-cluster-ip-range=192.168.201.0/24
     - --secure-port=443
     - --advertise-address=${_master_host}
     - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota
@@ -736,16 +741,68 @@ EOF`
   overwrite_content "${_content}" "${KUBELET_POLICY_CONTROLLER_MANIFEST}" "sudo"
 }
 
+function create_service_account_manifest() {
+  local _name=$1
+
+  local _content=`cat << EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${_name}
+  namespace: kube-system
+EOF`
+
+  overwrite_content "${_content}" "${K8S_MANIFEST_DIR}/service-${_name}.yaml" "sudo"
+}
+
+function create_rolebinding_manifest() {
+  local _service=$1
+  local _role=$2
+
+  local _content=`cat << EOF
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: ${_service}
+  labels:
+    k8s-app: ${_service}
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ${_role}
+subjects:
+- kind: ServiceAccount
+  name: ${_service}
+  namespace: kube-system
+EOF`
+
+  overwrite_content "${_content}" "${K8S_MANIFEST_DIR}/bind-${_service}-to-${_role}.yaml" "sudo"
+}
+
 function setup_kube_gui() {
   local _master=$1
 
   local _dashboard_download="https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml"
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
 
   kubectl create -f ${_dashboard_download}
   kubectl proxy --address="${_master}" --port=9090 --accept-hosts='^*$'&
+
+  # http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy
 }
 
-function get_k8s_resource_info() {
+function expose_to_external_ip() {
+  local _deployment=$1
+  local _service=$2
+
+  # loadbalancer/external IP is cloud provider feature, it will only work with GCP, AWS and Azure.
+  kubectl expose deployment ${_deployment} --type=LoadBalancer --name=${_service}
+}
+
+function get_k8s_resources() {
   #pod
   #deployment
   #service
@@ -755,18 +812,30 @@ function get_k8s_resource_info() {
   #secrets
   local _resource=$1
 
-  kubectl --namespace kube-system get ${_resource}
+  run_and_validate_cmd "kubectl --namespace kube-system get ${_resource}"
+}
+
+function get_k8s_resource_info() {
+  local _resource=$1
+
+  run_and_validate_cmd "kubectl --namespace kube-system describe ${_resource}"
 }
 
 function delete_k8s_resource() {
   local _resource=$1
   local _name=$2
 
-  kubectl --namespace kube-system delete ${_resource} ${_name}
+  run_and_validate_cmd "kubectl --namespace kube-system delete ${_resource} ${_name}"
 }
 
 function get_connection_state() {
   kubectl get cs
+}
+
+function get_k8s_secret() {
+  local _secret=$1
+
+  kubectl -n kube-system get secret
 }
 
 function test_k8s_deploy() {
@@ -775,8 +844,8 @@ function test_k8s_deploy() {
 }
 
 #----[ SETUP ]----#
-setup_calico_service_unit "$2"
-setup_cni_calico_plugin "$1"
+#setup_calico_service_unit "$2"
+#setup_cni_calico_plugin "$1"
 #setup_cni_lo_plugin
 
 #setup_tls_assets "$1"
@@ -797,6 +866,13 @@ setup_cni_calico_plugin "$1"
 
 #setup_kubelet "$1"
 #kubectl create -f /etc/kubernetes/manifests/calico-kube-controllers.yaml
+
+#----[ ACCOUNT ]----#
+create_service_account_manifest "admin-user"
+create_rolebinding_manifest "admin-user" "cluster-admin"
+create_rolebinding_manifest "kubernetes-dashboard" "cluster-admin"
+#service=`get_k8s_resources "secret" | grep admin-user | awk '{print $1}'`
+#get_k8s_resource_info "secret ${service}"
 
 #----[ DELETE ]----#
 #pod_name=`kubectl --namespace kube-system get pods | grep dashboard | cut -d' ' -f1`

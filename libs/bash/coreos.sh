@@ -1,4 +1,4 @@
-. ./cmd.sh
+. cmd.sh
 
 function install_coreos() {
   local _conf=$1

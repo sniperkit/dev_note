@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-. ./cmd.sh
-. ./file_and_dir.sh
-. ./sed.sh
-. ./log.sh
+. cmd.sh
+. file_and_dir.sh
+. sed.sh
+. log.sh
 
 # reference:
 # https://hk.saowen.com/a/4bcd4ff5fbdb05930119ce3c0f2d5c7b8de7200553ab5d1f85492585ee3159db
@@ -11,6 +11,7 @@
 # https://coreos.com/tectonic/docs/latest/tutorials/kubernetes/getting-started.html
 # https://docs.projectcalico.org/v3.0/getting-started/kubernetes/installation/integration
 # https://kubernetes.io/docs/tutorials/stateless-application/expose-external-ip-address/
+# https://github.com/kubernetes/community/blob/master/contributors/design-proposals/multicluster/federation.md
 
 TMP_DIR=`eval echo ~$USER`
 
@@ -794,7 +795,7 @@ function setup_kube_gui() {
   # http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy
 }
 
-function expose_to_external_ip() {
+function expose_deployment() {
   local _deployment=$1
   local _service=$2
 
@@ -848,7 +849,7 @@ function test_k8s_deploy() {
 #setup_cni_calico_plugin "$1"
 #setup_cni_lo_plugin
 
-#setup_tls_assets "$1"
+setup_tls_assets "$1"
 
 #setup_kubecli "$1"
 #setup_kubeadm
@@ -868,19 +869,19 @@ function test_k8s_deploy() {
 #kubectl create -f /etc/kubernetes/manifests/calico-kube-controllers.yaml
 
 #----[ ACCOUNT ]----#
-create_service_account_manifest "admin-user"
-create_rolebinding_manifest "admin-user" "cluster-admin"
-create_rolebinding_manifest "kubernetes-dashboard" "cluster-admin"
+#create_service_account_manifest "admin-user"
+#create_rolebinding_manifest "admin-user" "cluster-admin"
+#create_rolebinding_manifest "kubernetes-dashboard" "cluster-admin"
 #service=`get_k8s_resources "secret" | grep admin-user | awk '{print $1}'`
 #get_k8s_resource_info "secret ${service}"
 
 #----[ DELETE ]----#
-#pod_name=`kubectl --namespace kube-system get pods | grep dashboard | cut -d' ' -f1`
-#
-#delete_k8s_resource "deployment" "kubernetes-dashboard"
-#delete_k8s_resource "services" "kubernetes-dashboard"
-#delete_k8s_resource "secrets" "kubernetes-dashboard-certs"
-#delete_k8s_resource "serviceaccounts" "kubernetes-dashboard"
-#delete_k8s_resource "roles.rbac.authorization.k8s.io" "kubernetes-dashboard-minimal"
-#delete_k8s_resource "rolebindings.rbac.authorization.k8s.io" "kubernetes-dashboard-minimal"
-#delete_k8s_resource "pods" "${pod_name}"
+pod_name=`kubectl --namespace kube-system get pods | grep dashboard | cut -d' ' -f1`
+
+delete_k8s_resource "deployment" "kubernetes-dashboard"
+delete_k8s_resource "services" "kubernetes-dashboard"
+delete_k8s_resource "secrets" "kubernetes-dashboard-certs"
+delete_k8s_resource "serviceaccounts" "kubernetes-dashboard"
+delete_k8s_resource "roles.rbac.authorization.k8s.io" "kubernetes-dashboard-minimal"
+delete_k8s_resource "rolebindings.rbac.authorization.k8s.io" "kubernetes-dashboard-minimal"
+delete_k8s_resource "pods" "${pod_name}"

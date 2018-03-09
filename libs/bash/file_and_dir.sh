@@ -1,6 +1,6 @@
-. ./log.sh
-. ./cmd.sh
-. ./hash.sh
+. log.sh
+. cmd.sh
+. hash.sh
 
 function create_dir() {
   local dir=$1
@@ -26,12 +26,12 @@ function delete_pathlink() {
 
 }
 
-function change_dir() {
-  local dir=$1
+function change_dir {
+  local _dest_dir=$1
 
-  cd $dir && \
-  log "$dir ... ${FONT_GREEN}ok${FONT_NORMAL}" "[DIR]" || \
-  log "$dir ... ${FONT_RED}failed${FONT_NORMAL}" "[DIR]"
+  cd ${_dest_dir} && \
+  ( log "${_dest_dir} ... ${FONT_GREEN}OK${FONT_NORMAL}" "[DIR][change]" && return 0 ) || \
+  ( log "${_dest_dir} ... ${FONT_RED}ERROR${FONT_NORMAL}" "[DIR][change]" && return 1 )
 }
 
 function copy_file_or_dir() {

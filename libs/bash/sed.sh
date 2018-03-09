@@ -1,4 +1,4 @@
-. ./log.sh
+. log.sh
 
 function replace_word_in_file() {
   local _replace=$1

@@ -1,4 +1,4 @@
-. ./log.sh
+. log.sh
 
 function run_and_validate_cmd() {
   local _cmd="$1"

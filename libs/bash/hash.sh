@@ -1,4 +1,4 @@
-. ./log.sh
+. log.sh
 
 function compare_item_hash() {
   local _item1=`md5sum $1`

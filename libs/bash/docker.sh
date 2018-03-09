@@ -1,8 +1,10 @@
-. ./log.sh
-. ./git.sh
+. log.sh
+. git.sh
+. file_and_dir.sh
 
 function docker_stop_all_containers() {
-  for container in `docker ps | tail -n +2 | awk '{print $1}'`; do
+  for container in `docker ps | tail -n +2 | awk '{print $1}'`
+  do
     docker stop ${container} && \
     log "${container}${FONT_GREEN} ... ok${FONT_NORMAL}" "[DOCKER][container-stop]" || \
     log "${container}${FONT_RED} ... failed${FONT_NORMAL}" "[DOCKER][container-stop]"
@@ -10,7 +12,8 @@ function docker_stop_all_containers() {
 }
 
 function docker_remove_all_containers() {
-  for container in `docker ps -a | tail -n +2 | awk '{print $1}'`; do
+  for container in `docker ps -a | tail -n +2 | awk '{print $1}'`
+  do
     docker rm ${container} && \
     log "${container}${FONT_GREEN} ... ok${FONT_NORMAL}" "[DOCKER][container-remove]" || \
     log "${container}${FONT_RED} ... failed${FONT_NORMAL}" "[DOCKER][container-remove]"
@@ -24,6 +27,10 @@ function docker_build_from_repo {
 
   get_or_update_git_repo "${_repo_url}" "${_dest_dir}"
 
-  change_dir "${_dest_dir}"
-  docker build -t "${_tag_str}" .
+  if change_dir "${_dest_dir}"
+  then
+    docker build -t "${_tag_str}" . && \
+    ( log "${container}${FONT_GREEN} ... OK${FONT_NORMAL}" "[DOCKER][build]"; return 0 ) || \
+    ( log "${container}${FONT_RED} ... ERROR${FONT_NORMAL}" "[DOCKER][build]"; return 1 )
+  fi
 }

@@ -1,4 +1,4 @@
-. cmd.sh
+. ./cmd.sh
 
 function hash_password() {
   local f_out=${1:-}

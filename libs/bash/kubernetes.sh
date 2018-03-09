@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-. cmd.sh
-. file_and_dir.sh
-. sed.sh
-. log.sh
+. ./cmd.sh
+. ./file_and_dir.sh
+. ./sed.sh
+. ./log.sh
 
 # reference:
 # https://hk.saowen.com/a/4bcd4ff5fbdb05930119ce3c0f2d5c7b8de7200553ab5d1f85492585ee3159db
@@ -12,13 +12,16 @@
 # https://docs.projectcalico.org/v3.0/getting-started/kubernetes/installation/integration
 # https://kubernetes.io/docs/tutorials/stateless-application/expose-external-ip-address/
 # https://github.com/kubernetes/community/blob/master/contributors/design-proposals/multicluster/federation.md
+# https://kubernetes.io/docs/concepts/cluster-administration/network-plugins/
+# https://thenewstack.io/hackers-guide-kubernetes-networking/
 
 TMP_DIR=`eval echo ~$USER`
 
 #K8S_VERSION="v1.9.3_coreos.0"
 K8S_VERSION=`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`
 K8S_DNS_SERVICE_IP="8.8.8.8"
-K8S_NETWORK_PLUGIN="cni"
+K8S_NETWORK_PLUGIN="cni" #cni/kubenet
+#K8S_POD_CIDR="192.168.0.0/16"
 
 K8S_TMP_KEY_DIR="${TMP_DIR}/kube-ssl"
 K8S_KEY_DIR="/etc/kubernetes/ssl"
@@ -364,9 +367,10 @@ ExecStartPre=/usr/bin/mkdir -p /var/log/containers
 ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \\
   --kubeconfig=<__KUBECONFIG__> \\
-  --cni-conf-dir=<__CNI_CONF__> \\
-  --cni-bin-dir=<__CNI_BIN__> \\
   --network-plugin=<__NETWORK_PLUGIN__> \\
+#  --cni-conf-dir=<__CNI_CONF__> \\
+#  --cni-bin-dir=<__CNI_BIN__> \\
+  --pod-cidr=<__POD_CIDR__> \\
   --container-runtime=docker \\
   --allow-privileged=true \\
   --pod-manifest-path=/etc/kubernetes/manifests \\
@@ -395,6 +399,7 @@ EOF
   replace_word_in_file "<__KUBECONFIG__>" "${_escaped_kubelet_conf}" "${KUBELET_UNIT}" "sudo"
   replace_word_in_file "<__CNI_CONF__>" "${_escaped_calico}" "${KUBELET_UNIT}" "sudo"
   replace_word_in_file "<__CNI_BIN__>" "${_escaped_cni}" "${KUBELET_UNIT}" "sudo"
+  replace_word_in_file "<__POD_CIDR__>" "${K8S_POD_CIDR}" "${KUBELET_UNIT}" "sudo"
 }
 
 function create_calico_kube_controllers_manifest() {
@@ -839,6 +844,18 @@ function get_k8s_secret() {
   kubectl -n kube-system get secret
 }
 
+function get_k8s_pod_network_info() {
+  local _pod=$1
+
+  local _container_id=`kubectl -n kube-system get po ${_pod} -o jsonpath='{.status.containerStatuses[0].containerID}' | cut -c 10-21`
+  log "${_container_id}" "[K8S][container_id]"
+
+  local _pid=`docker inspect --format '{{ .State.Pid }}' ${_container_id}`
+  log "${_pid}" "[K8S][_pid]"
+
+  sudo nsenter -t ${_pid} -n ip addr
+}
+
 function test_k8s_deploy() {
   kubectl run my-nginx --image=nginx --replicas=2 --port=80
   kubectl delete deployment my-nginx
@@ -849,7 +866,7 @@ function test_k8s_deploy() {
 #setup_cni_calico_plugin "$1"
 #setup_cni_lo_plugin
 
-setup_tls_assets "$1"
+#setup_tls_assets "$1"
 
 #setup_kubecli "$1"
 #setup_kubeadm
@@ -885,3 +902,7 @@ delete_k8s_resource "serviceaccounts" "kubernetes-dashboard"
 delete_k8s_resource "roles.rbac.authorization.k8s.io" "kubernetes-dashboard-minimal"
 delete_k8s_resource "rolebindings.rbac.authorization.k8s.io" "kubernetes-dashboard-minimal"
 delete_k8s_resource "pods" "${pod_name}"
+
+#---[ DEBUG ]----#
+#_pod=`get_k8s_resources "pods" | grep "kubernetes-dashboard" | awk '{print $1}'`
+#get_k8s_pod_network_info "${_pod}"

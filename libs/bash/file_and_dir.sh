@@ -1,6 +1,6 @@
-. log.sh
-. cmd.sh
-. hash.sh
+. ./log.sh
+. ./cmd.sh
+. ./hash.sh
 
 function create_dir() {
   local dir=$1

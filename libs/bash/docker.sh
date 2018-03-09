@@ -1,6 +1,6 @@
-. log.sh
-. git.sh
-. file_and_dir.sh
+. ./log.sh
+. ./git.sh
+. ./file_and_dir.sh
 
 function docker_stop_all_containers() {
   for container in `docker ps | tail -n +2 | awk '{print $1}'`

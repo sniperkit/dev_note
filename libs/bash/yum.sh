@@ -1,4 +1,4 @@
-. cmd.sh
+. ./cmd.sh
 
 function yum_dryrun() {
   local _dir=$1

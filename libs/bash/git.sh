@@ -1,5 +1,5 @@
-. log.sh
-. file_and_dir.sh
+. ./log.sh
+. ./file_and_dir.sh
 
 function get_or_update_git_repo() {
   local repo_url=$1

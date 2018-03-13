@@ -54,13 +54,6 @@ EOF`
   overwrite_content "${_content}" "${_script}"
 }
 
-function uninstall_dcos {
-  for i in `find /* -name *dcos*`; do echo $i | grep -P '\bdcos' | xargs rm -rf ; done
-  for i in `find /* -name *_dcos*`; do echo $i | xargs rm -rf ; done
-  for i in `find /* -name *mesos*`; do echo $i | grep -P '\bmesos' | xargs rm -rf ; done
-  for i in `find /* -name *_mesos*`; do echo $i | xargs rm -rf ; done
-}
-
 function create_dcos_config {
   local _bootstrap_host=$2
   local _bootstrap_port=$3
@@ -97,15 +90,42 @@ EOF`
   done
 }
 
+function uninstall_dcos {
+  for i in `find /* -name *dcos*`; do echo $i | grep -P '\bdcos' | xargs rm -rf ; done
+  for i in `find /* -name *_dcos*`; do echo $i | xargs rm -rf ; done
+  for i in `find /* -name *mesos*`; do echo $i | grep -P '\bmesos' | xargs rm -rf ; done
+  for i in `find /* -name *_mesos*`; do echo $i | xargs rm -rf ; done
+}
+
+function run_dcos_generate_config {
+  local _run_dir=$1
+
+  change_dir "${_run_dir}"
+  sh ./dcos_generate_config.sh
+}
+
+function run_dcos_bootstrap_nginx {
+  local _expose_port=$1
+  local _dcos_dir=$2
+
+  echo "docker run -d -p $_expose_port:80 -v ${_dcos_dir}/genconf/serve:/usr/share/nginx/html:ro nginx"
+  docker run -d -p $_expose_port:80 -v ${_dcos_dir}/genconf/serve:/usr/share/nginx/html:ro nginx
+}
+
 DCOS_BOOTSTRAP_HOME="/opt/dcos_bootstrap"
 BOOTSTRAP_HOST=$1
 BOOTSTRAP_PORT="10080"
-MASTER_LIST=("192.168.201.108" "192.168.201.109")
+MASTER_LIST=("192.168.201.108")
 
 #download_dcos_generate_config "${DCOS_BOOTSTRAP_HOME}"
 #create_ip_detect_script "${BOOTSTRAP_HOST}" "${DCOS_BOOTSTRAP_HOME}/genconf"
-create_dcos_config "${DCOS_BOOTSTRAP_HOME}/genconf" "${BOOTSTRAP_HOST}" "${BOOTSTRAP_PORT}" "MASTER_LIST[@]"
+#create_dcos_config "${DCOS_BOOTSTRAP_HOME}/genconf" "${BOOTSTRAP_HOST}" "${BOOTSTRAP_PORT}" "MASTER_LIST[@]"
 
-# create config.yaml
-# start nginx and map port 10080:80
+#. ./docker.sh
+#set_docker_storage "/opt/docker_volume"
+
+#run_dcos_generate_config "${DCOS_BOOTSTRAP_HOME}"
+
+#run_dcos_bootstrap_nginx "${BOOTSTRAP_PORT}" "${DCOS_BOOTSTRAP_HOME}"
+
 

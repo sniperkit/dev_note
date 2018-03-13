@@ -49,15 +49,15 @@ function set_docker_storage() {
 Environment="DOCKER_STORAGE_OPTIONS=--storage-driver=overlay"
 Environment="DOCKER_RUNTIME_OPTIONS=--graph=${_storage_dir}"
 ExecStart=
-ExecStart=/usr/bin/dockerd ${DOCKER_STORAGE_OPTIONS} ${DOCKER_RUNTIME_OPTIONS}
+ExecStart=/usr/bin/dockerd \\${DOCKER_STORAGE_OPTIONS} \\${DOCKER_RUNTIME_OPTIONS}
 EOL
 `
 
-  systemctl docker stop
+  systemctl stop docker
 
   create_dir "`dirname ${_service_unit}`"
   overwrite_content "${_service_unit_content}" "${_service_unit}"
 
   systemctl daemon-reload
-  systemctl docker start
+  systemctl start docker
 }

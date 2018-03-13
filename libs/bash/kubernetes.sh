@@ -271,9 +271,7 @@ function setup_cni_calico_plugin() {
     "etcd_endpoints": "http://${_etcd_host}:2379",
     "log_level": "DEBUG",
     "ipam": {
-        "type": "calico-ipam",
-        "assign_ipv4": "true",
-        "ipv4_pools": ["192.168.201.0/24"]
+        "type": "calico-ipam"
     },
     "policy": {
         "type": "k8s"
@@ -368,9 +366,9 @@ ExecStartPre=-/usr/bin/rkt rm --uuid-file=/var/run/kubelet-pod.uuid
 ExecStart=/usr/lib/coreos/kubelet-wrapper \\
   --kubeconfig=<__KUBECONFIG__> \\
   --network-plugin=<__NETWORK_PLUGIN__> \\
-#  --cni-conf-dir=<__CNI_CONF__> \\
-#  --cni-bin-dir=<__CNI_BIN__> \\
-  --pod-cidr=<__POD_CIDR__> \\
+  --cni-conf-dir=<__CNI_CONF__> \\
+  --cni-bin-dir=<__CNI_BIN__> \\
+#  --pod-cidr=<__POD_CIDR__> \\
   --container-runtime=docker \\
   --allow-privileged=true \\
   --pod-manifest-path=/etc/kubernetes/manifests \\
@@ -400,6 +398,8 @@ EOF
   replace_word_in_file "<__CNI_CONF__>" "${_escaped_calico}" "${KUBELET_UNIT}" "sudo"
   replace_word_in_file "<__CNI_BIN__>" "${_escaped_cni}" "${KUBELET_UNIT}" "sudo"
   replace_word_in_file "<__POD_CIDR__>" "${K8S_POD_CIDR}" "${KUBELET_UNIT}" "sudo"
+
+  run_and_validate_cmd "sudo systemctl daemon-reload"
 }
 
 function create_calico_kube_controllers_manifest() {
@@ -711,7 +711,8 @@ EOF`
 function create_kubelet_policy_controller_manifest() {
   # Implements the Kubernetes NetworkPolicy API by watching the Kubernetes API for Pod, Namespace,
   # and NetworkPolicy events and configuring Calico in response. It runs as a single pod managed by a ReplicaSet.
-  local _etcd_host=$1
+  local _master_host=$1
+  local _etcd_host=$2
 
   local _content=`cat << EOF
 apiVersion: extensions/v1beta1
@@ -739,7 +740,7 @@ spec:
             - name: ETCD_ENDPOINTS
               value: "http://${_etcd_host}:2379"
             - name: K8S_API
-              value: "https://kubernetes.default:443"
+              value: "http://${_master_host}:8080"
             - name: CONFIGURE_ETC_HOSTS
               value: "true"
 EOF`
@@ -865,24 +866,27 @@ function test_k8s_deploy() {
 #setup_calico_service_unit "$2"
 #setup_cni_calico_plugin "$1"
 #setup_cni_lo_plugin
-
+#
 #setup_tls_assets "$1"
-
+#
 #setup_kubecli "$1"
 #setup_kubeadm
 
 #create_kube_config
-#set_kubeconfig_cluster "$1" "scratch"
+set_kubeconfig_cluster "$1" "scratch" "insecure"
 #set_kubeconfig_context "dev-one"
-
+##
 #create_calico_kube_controllers_manifest "$2"
 #create_kubelet_api_manifest "$1" "$2"
 #create_kubelet_proxy_manifest "$1"
 #create_kubelet_controller_manifest "$1"
 #create_kubelet_scheduler_manifest "$1"
-#create_kubelet_policy_controller_manifest "$2"
-
+#create_kubelet_policy_controller_manifest "$1" "$2"
+#
 #setup_kubelet "$1"
+
+#sudo systemctl daemon-reload
+#sudo systemctl start kubelet
 #kubectl create -f /etc/kubernetes/manifests/calico-kube-controllers.yaml
 
 #----[ ACCOUNT ]----#
@@ -893,15 +897,15 @@ function test_k8s_deploy() {
 #get_k8s_resource_info "secret ${service}"
 
 #----[ DELETE ]----#
-pod_name=`kubectl --namespace kube-system get pods | grep dashboard | cut -d' ' -f1`
-
-delete_k8s_resource "deployment" "kubernetes-dashboard"
-delete_k8s_resource "services" "kubernetes-dashboard"
-delete_k8s_resource "secrets" "kubernetes-dashboard-certs"
-delete_k8s_resource "serviceaccounts" "kubernetes-dashboard"
-delete_k8s_resource "roles.rbac.authorization.k8s.io" "kubernetes-dashboard-minimal"
-delete_k8s_resource "rolebindings.rbac.authorization.k8s.io" "kubernetes-dashboard-minimal"
-delete_k8s_resource "pods" "${pod_name}"
+#pod_name=`kubectl --namespace kube-system get pods | grep dashboard | cut -d' ' -f1`
+#
+#delete_k8s_resource "deployment" "kubernetes-dashboard"
+#delete_k8s_resource "services" "kubernetes-dashboard"
+#delete_k8s_resource "secrets" "kubernetes-dashboard-certs"
+#delete_k8s_resource "serviceaccounts" "kubernetes-dashboard"
+#delete_k8s_resource "roles.rbac.authorization.k8s.io" "kubernetes-dashboard-minimal"
+#delete_k8s_resource "rolebindings.rbac.authorization.k8s.io" "kubernetes-dashboard-minimal"
+#delete_k8s_resource "pods" "${pod_name}"
 
 #---[ DEBUG ]----#
 #_pod=`get_k8s_resources "pods" | grep "kubernetes-dashboard" | awk '{print $1}'`

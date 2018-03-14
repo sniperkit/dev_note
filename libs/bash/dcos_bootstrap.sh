@@ -36,7 +36,7 @@ function create_ip_detect_script {
 #!/usr/bin/env bash
 export LANG=C.UTF-8
 
-release="\`uname -r\`"
+release="\\$(uname -r)"
 
 # aws private
 # curl -fsL http://169.254.169.254/latest/meta-data/local-ipv4 && echo && exit 0
@@ -118,7 +118,7 @@ BOOTSTRAP_PORT="10080"
 MASTER_LIST=("192.168.201.108")
 
 #download_dcos_generate_config "${DCOS_BOOTSTRAP_HOME}"
-#create_ip_detect_script "${BOOTSTRAP_HOST}" "${DCOS_BOOTSTRAP_HOME}/genconf"
+create_ip_detect_script "${BOOTSTRAP_HOST}" "${DCOS_BOOTSTRAP_HOME}/genconf"
 #create_dcos_config "${DCOS_BOOTSTRAP_HOME}/genconf" "${BOOTSTRAP_HOST}" "${BOOTSTRAP_PORT}" "MASTER_LIST[@]"
 
 #. ./docker.sh
@@ -126,6 +126,6 @@ MASTER_LIST=("192.168.201.108")
 
 #run_dcos_generate_config "${DCOS_BOOTSTRAP_HOME}"
 
-#run_dcos_bootstrap_nginx "${BOOTSTRAP_PORT}" "${DCOS_BOOTSTRAP_HOME}"
+run_dcos_bootstrap_nginx "${BOOTSTRAP_PORT}" "${DCOS_BOOTSTRAP_HOME}"
 
 

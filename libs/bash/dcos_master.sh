@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 . ./file_and_dir.sh
 
+# <troubleshooting:1.11> https://docs.mesosphere.com/1.11/installing/oss/troubleshooting/
+
 function download_dcos_install {
   local _bootstrap_node=$1
   local _dest=$2

@@ -1,0 +1,10 @@
+. ./curl.sh
+
+function marathon_deploy_app {
+  local _host=$1
+  local _json=$2
+
+  curl_request "curl -X POST http://${_host}/v2/apps -d @${_json} -H 'Content-type: application/json'"
+}
+
+marathon_deploy_app "192.168.201.108:8080" "/tmp/marathon/sample.json"

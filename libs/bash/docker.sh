@@ -2,6 +2,24 @@
 . ./git.sh
 . ./file_and_dir.sh
 
+function install_docker_engine {
+  local _repo_config='/etc/yum.repos.d/docker.repo'
+  local _config_content=`cat << EOF
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/\\$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+EOF`
+
+  overwrite_content "${_config_content}" "${_repo_config}"
+  yum install docker-engine
+
+  systemctl enable docker
+  systemctl start docker
+}
+
 function get_docker_info() {
   docker info
 }

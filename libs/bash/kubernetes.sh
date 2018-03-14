@@ -872,9 +872,9 @@ function test_k8s_deploy() {
 #setup_kubecli "$1"
 #setup_kubeadm
 
-#create_kube_config
+create_kube_config
 set_kubeconfig_cluster "$1" "scratch" "insecure"
-#set_kubeconfig_context "dev-one"
+set_kubeconfig_context "dev-one"
 ##
 #create_calico_kube_controllers_manifest "$2"
 #create_kubelet_api_manifest "$1" "$2"

@@ -1,16 +1,21 @@
 {
-  "id": "basic-3",
-  "cmd": "python3 -m http.server 8080",
+  "id": "/<project>/another",
   "cpus": 0.5,
-  "mem": 32.0,
+  "mem": 1024,
   "networks": [ { "mode": "container/bridge" } ],
   "container": {
     "type": "DOCKER",
     "docker": {
-      "image": "python:3"
+      "image": "<image from private repo>"
     },
     "portMappings": [
       { "containerPort": 8080, "hostPort": 0 }
     ]
-  }
+  },
+  "fetch" : [
+    {
+      "uri" : "http://192.168.201.102:10080/bootstrap/docker.tar.gz",
+      "extract" : true
+    }
+  ]
 }

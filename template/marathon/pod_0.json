@@ -1,16 +1,53 @@
 {
-  "id": "pod-2",
-  "cmd": "python3 -m http.server 8080",
-  "cpus": 0.5,
-  "mem": 32.0,
-  "networks": [ { "mode": "container/bridge" } ],
-  "container": {
-    "type": "DOCKER",
-    "docker": {
-      "image": "python:3"
-    },
-    "portMappings": [
-      { "containerPort": 8080, "hostPort": 0 }
-    ]
-  }
+   "id":"/simple-pod",
+   "containers":[
+      {
+         "name":"simpletask1",
+         "exec":{
+            "command":{
+               "shell":"env && sleep 10000"
+            }
+         },
+         "resources":{
+            "cpus":0.1,
+            "mem":32
+         },
+         "image":{
+            "kind":"DOCKER",
+            "id":"python:3.5.2-alpine"
+         },
+         "healthChecks":[
+      {
+        "protocol": "COMMAND",
+  "command": { "value": "/bin/bash -c \\\"</dev/tcp/$HOST/$PORT0\\\"" },
+        "gracePeriodSeconds": 300,
+        "intervalSeconds": 60,
+        "timeoutSeconds": 20,
+        "maxConsecutiveFailures": 3,
+        "ignoreHttp1xx": false
+      }
+    ],
+      },
+      {
+         "name":"simpletask2",
+         "exec":{
+            "command":{
+               "shell":"env && sleep 10000"
+            }
+         },
+         "resources":{
+            "cpus":0.1,
+            "mem":32
+         },
+         "image":{
+            "kind":"DOCKER",
+            "id":"python:3.5.2-alpine"
+         }
+      }
+   ],
+   "networks":[
+      {
+         "mode":"host"
+      }
+   ]
 }

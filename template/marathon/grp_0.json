@@ -1,0 +1,15 @@
+{
+  "id": "/grp-0",
+  "groups": [
+    {
+      "id": "/grp-0/base",
+      "apps": [
+        {
+          "id": "/grp-0/base/one",
+          "cmd": "sleep 0",
+          "instance": 1
+        }
+      ]
+    }
+  ]
+}

@@ -79,3 +79,17 @@ EOL
   systemctl daemon-reload
   systemctl start docker
 }
+
+function compress_docker_credential {
+  local _user=$1
+  local _pass=$2
+  local _docker_host=$3
+  local _dest_dir=$4
+
+  docker login --username=${_user} --password=${_pass} ${_docker_host}
+
+  change_dir "~"
+  tar -czf docker.tar.gz .docker
+  tar -tvf ~/docker.tar.gz
+  cp docker.tar.gz ${_dest_dir}/
+}

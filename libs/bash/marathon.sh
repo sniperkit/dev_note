@@ -1,3 +1,5 @@
+# https://docs.mesosphere.com/pdf/1.10/deploying-services/marathon-api/1.10-deploying-services-marathon-api.pdf
+
 . ./curl.sh
 
 function marathon_deploy_app {
@@ -29,5 +31,13 @@ function marathon_delete_pods {
 
   curl -X DELETE http://${_host}/v2/pods/${_pod}
 }
+
+function marathon_get_logging {
+  local _host=$1
+
+  curl -X GET http://${_host}/logging| python -mjson.tool
+}
+
+ curl -X POST http://192.168.201.102:8080/logging -d "DEBUG"
 
 marathon_deploy_app "192.168.201.108:8080" "/tmp/marathon/sample.json"

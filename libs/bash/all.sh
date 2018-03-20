@@ -186,6 +186,8 @@ function is_python() {
 function yum_setup_python3() {
   local version=$1
 
+  IUS_REPO="https://centos7.iuscommunity.org/ius-release.rpm"
+
   yum_install "${IUS_REPO}"
 
   if [[ ${version} == '3.5' ]]; then

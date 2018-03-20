@@ -2,7 +2,7 @@
 . ./git.sh
 . ./file_and_dir.sh
 
-function install_docker_engine {
+function create_docker_repo_file {
   local _repo_config='/etc/yum.repos.d/docker.repo'
   local _config_content=`cat << EOF
 [dockerrepo]
@@ -14,6 +14,9 @@ gpgkey=https://yum.dockerproject.org/gpg
 EOF`
 
   overwrite_content "${_config_content}" "${_repo_config}"
+}
+
+function install_docker_engine {
   yum install docker-engine
 
   systemctl enable docker
@@ -83,13 +86,34 @@ EOL
 function compress_docker_credential {
   local _user=$1
   local _pass=$2
-  local _docker_host=$3
-  local _dest_dir=$4
+  local _docker_host=$3 #quay.io
+  local _dest_dir=$4 #/etc
 
   docker login --username=${_user} --password=${_pass} ${_docker_host}
 
-  change_dir "~"
+  cd ~
   tar -czf docker.tar.gz .docker
   tar -tvf ~/docker.tar.gz
   cp docker.tar.gz ${_dest_dir}/
+}
+
+function disable_docker_restart_always {
+  docker update --restart=no $(docker ps -a -q)
+}
+
+function clean_docker_space {
+  # Clean volumes
+  docker volume ls -qf dangling=true | xargs docker volume rm
+
+  # Clean images
+  docker rmi $(docker images -f dangling=true -q)
+
+  # Clean containers
+  docker rm $(docker ps -a -q)
+}
+
+function find_docker_child_images {
+  local _image_id=$1
+
+  docker inspect --format='{{.Id}} {{.Parent}}' $(docker images --filter since=${_image_id} -q)
 }

@@ -113,19 +113,19 @@ function run_dcos_bootstrap_nginx {
 }
 
 DCOS_BOOTSTRAP_HOME="/opt/dcos_bootstrap"
-BOOTSTRAP_HOST="192.168.201.102"
+BOOTSTRAP_HOST="172.27.11.110"
 BOOTSTRAP_PORT="10080"
-MASTER_LIST=("192.168.201.102")
+MASTER_LIST=("172.27.11.110")
 
-#download_dcos_generate_config "${DCOS_BOOTSTRAP_HOME}"
-#create_ip_detect_script "${BOOTSTRAP_HOST}" "${DCOS_BOOTSTRAP_HOME}/genconf"
-#create_dcos_config "${DCOS_BOOTSTRAP_HOME}/genconf" "${BOOTSTRAP_HOST}" "${BOOTSTRAP_PORT}" "MASTER_LIST[@]"
+download_dcos_generate_config "${DCOS_BOOTSTRAP_HOME}"
+create_ip_detect_script "${BOOTSTRAP_HOST}" "${DCOS_BOOTSTRAP_HOME}/genconf"
+create_dcos_config "${DCOS_BOOTSTRAP_HOME}/genconf" "${BOOTSTRAP_HOST}" "${BOOTSTRAP_PORT}" "MASTER_LIST[@]"
 
 #. ./docker.sh
 #set_docker_storage "/opt/docker_volume"
 
-#run_dcos_generate_config "${DCOS_BOOTSTRAP_HOME}"
-#
-#run_dcos_bootstrap_nginx "${BOOTSTRAP_PORT}" "${DCOS_BOOTSTRAP_HOME}"
+run_dcos_generate_config "${DCOS_BOOTSTRAP_HOME}"
+
+run_dcos_bootstrap_nginx "${BOOTSTRAP_PORT}" "${DCOS_BOOTSTRAP_HOME}"
 
 

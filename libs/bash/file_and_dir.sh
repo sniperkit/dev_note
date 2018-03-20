@@ -122,3 +122,14 @@ function is_path() {
     return 1
   fi
 }
+
+function sort_file() {
+  local _file=$1
+  local _file_type=$2
+
+  if [[ $_file_type = 'json' ]]; then
+    cat ${_file} | python -m json.tool > ${_file}.sorted && \
+    log "${_file}.sorted ... ${FONT_GREEN}DONE${FONT_NORMAL}" "[FILE][sort_json]" || \
+    log "${_file}.sorted ... ${FONT_RED}ERROR${FONT_NORMAL}" "[FILE][sort_json]"
+  fi
+}

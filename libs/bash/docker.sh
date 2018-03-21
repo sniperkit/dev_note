@@ -1,6 +1,7 @@
 . ./log.sh
 . ./git.sh
 . ./file_and_dir.sh
+. ./default_paths.sh
 
 function create_docker_repo_file {
   local _repo_config='/etc/yum.repos.d/docker.repo'
@@ -123,4 +124,21 @@ function find_docker_child_images {
   local _image_id=$1
 
   docker inspect --format='{{.Id}} {{.Parent}}' $(docker images --filter since=${_image_id} -q)
+}
+
+function setup_docker_registry {
+  # https://philipzheng.gitbooks.io/docker_practice/content/repository/local_repo.html
+  docker run -d -p 5000:5000 --name registry registry:2
+}
+
+function add_insecure_docker_registry {
+  local _registry_host=$1
+  local _config="${DOCKER_DAEMON_CONFIG}"
+  local _content=`cat << EOF
+{
+    "insecure-registries": [
+        "${_registry_host}:5000"
+    ]
+}
+EOF`
 }

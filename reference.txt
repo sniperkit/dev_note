@@ -1,2 +1,10 @@
 # RAFT
 http://thesecretlivesofdata.com/raft/
+
+# WIRESHARK
+#**** decrypt https content****#
+https://jimshaver.net/2015/02/11/decrypting-tls-browser-traffic-with-wireshark-the-easy-way/
+
+#**** need to open wireshark and chrome in same terminal ****#
+$~ open /Applications/Google\ Chrome.app
+$wireshark

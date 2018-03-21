@@ -45,6 +45,18 @@ function docker_remove_all_containers() {
   done
 }
 
+function docker_build_image {
+  local _build_dir=$1
+  local _tag=$2
+
+  if change_dir "${_build_dir}"
+  then
+    docker build -t "${_tag}" . && \
+    ( log "${container}${FONT_GREEN} ... OK${FONT_NORMAL}" "[DOCKER][build]"; return 0 ) || \
+    ( log "${container}${FONT_RED} ... ERROR${FONT_NORMAL}" "[DOCKER][build]"; return 1 )
+  fi
+}
+
 function docker_build_from_repo {
   local _repo_url=$1
   local _dest_dir=$2
@@ -52,12 +64,7 @@ function docker_build_from_repo {
 
   get_or_update_git_repo "${_repo_url}" "${_dest_dir}"
 
-  if change_dir "${_dest_dir}"
-  then
-    docker build -t "${_tag_str}" . && \
-    ( log "${container}${FONT_GREEN} ... OK${FONT_NORMAL}" "[DOCKER][build]"; return 0 ) || \
-    ( log "${container}${FONT_RED} ... ERROR${FONT_NORMAL}" "[DOCKER][build]"; return 1 )
-  fi
+  docker_build_image "${_dest_dir}" "${_tag_str}"
 }
 
 function set_docker_storage() {

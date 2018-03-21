@@ -2,7 +2,10 @@ spark_version: 2.7.0
 url: https://spark.apache.org/docs/latest/spark-standalone.html
 info: setup standalone cluster
 node: master + slave
+minimal_requirement: no specifc requirement,
+                     allocated memory from what is available, 1 core and 1g mem is fine
 
 #setup
 https://data-flair.training/blogs/apache-spark-installation-standalone-mode/
 https://www.ibm.com/support/knowledgecenter/en/SSCTFE_1.1.0/com.ibm.azk.v1r1.azka100/topics/azkic_t_confignetwork.htm
+https://spark.apache.org/docs/latest/spark-standalone.html

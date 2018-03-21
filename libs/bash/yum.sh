@@ -46,6 +46,7 @@ function get_yum_available_in_repos {
                  "http://linux.mirrors.es.net/centos/7.3.1611/os/x86_64/Packages/" \
                  "http://mirror.centos.org/centos/7/updates/x86_64/Packages/" \
                  "http://mirror.centos.org/centos/7/cr/x86_64/Packages/" \
+                 "http://download.fedoraproject.org/pub/epel/7/x86_64/Packages/p/" \
                  "https://yum.dockerproject.org/repo/main/centos/7/Packages/" \
                  "https://dl.iuscommunity.org/pub/ius/stable/CentOS/7/x86_64/")
 
@@ -54,8 +55,9 @@ function get_yum_available_in_repos {
   for repo in "${_repos[@]}"
   do
      _cntr=$(($_cntr+1))
-     echo $repo > "${_path_prefix}"_"${_cntr}".html
-     curl $repo >> "${_path_prefix}"_"${_cntr}".html
+#     echo $repo > "${_path_prefix}"_"${_cntr}".html
+     wget -O "${_path_prefix}"_"${_cntr}".html $repo
+     sed -i "1s#^#$repo\n#" "${_path_prefix}"_"${_cntr}".html
   done
 }
 
@@ -187,9 +189,9 @@ update_bom_json_block() {
 #sort_file "/opt/tmp_bom/pkg_bom.json" "json"
 
 #yum_download "install" "python36u" "/opt/download_python36u"
-#search_pkgs_in_repos "/opt/download_python36u" "/opt/tmp_bom/available_pkgs" "/opt/tmp_bom/match_yum_pkgs.txt"
+search_pkgs_in_repos "/opt/download_python36u" "/opt/tmp_bom/available_pkgs" "/opt/tmp_bom/match_yum_pkgs.txt"
 #update_pkg_bom_file "/opt/download_python36u" "/opt/tmp_bom/match_yum_pkgs.txt" "/opt/tmp_bom/pkg_bom.json"
 #
-. ./file_and_dir.sh
-sort_file "/opt/tmp_bom/pkg_bom.json" "json"
+#. ./file_and_dir.sh
+#sort_file "/opt/tmp_bom/pkg_bom.json" "json"
 

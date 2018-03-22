@@ -7,7 +7,7 @@ RUN apk --update add bash openssh curl python3 py3-paramiko py3-yaml -v
 # CONFIGS
 ARG SETUP_ROOT='/opt/dcos_setup'
 ARG BOOTSTRAP_ROOT='/opt/dcos_bootstrap'
-ARG DCOS_SCRIPT_ARCHIVE='https://downloads.dcos.io/dcos/stable/dcos_generate_config.sh'
+ARG BOOTSTRAP_SCRIPT_ARCHIVE='https://downloads.dcos.io/dcos/stable/dcos_generate_config.sh'
 
 # SETUP
 RUN mkdir -p $SETUP_ROOT
@@ -15,7 +15,7 @@ RUN mkdir -p $BOOTSTRAP_ROOT/genconf
 COPY ./tool $SETUP_ROOT/
 
 # DOWNLOAD DCOS
-RUN curl -o $BOOTSTRAP_ROOT/dcos_generate_config.sh $DCOS_SCRIPT_ARCHIVE
+RUN curl -o $BOOTSTRAP_ROOT/dcos_generate_config.sh $BOOTSTRAP_SCRIPT_ARCHIVE
 
 ## SPARK
 #ARG SPARK_VERSION=2.3.0

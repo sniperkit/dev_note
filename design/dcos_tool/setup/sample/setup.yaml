@@ -1,0 +1,12 @@
+---
+cluster_name: test_cluster
+bootstrap_node:
+  addr: 192.168.201.100
+  port: 10800
+master_nodes:
+  addr:
+    - 192.168.201.112
+agent_nodes:
+  addr:
+    - 192.168.201.999
+...

@@ -126,6 +126,10 @@ function find_docker_child_images {
   docker inspect --format='{{.Id}} {{.Parent}}' $(docker images --filter since=${_image_id} -q)
 }
 
+function get_docker_command {
+  docker inspect  -f "{{.Name}} {{.Config.Cmd}}" $(docker ps -a -q)
+}
+
 function setup_docker_registry {
   # https://philipzheng.gitbooks.io/docker_practice/content/repository/local_repo.html
   docker run -d -p 5000:5000 --name registry registry:2

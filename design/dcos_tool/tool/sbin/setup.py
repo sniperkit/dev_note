@@ -5,6 +5,7 @@ import argparse
 import yaml
 import paramiko
 import time
+from string import Template
 
 
 class Log():
@@ -81,10 +82,23 @@ class Shell():
         return lines
 
 
+class UseTemplate():
+    def __init__(self, template):
+        self.template=template
+        self.log=Log()
 
-parser = argparse.ArgumentParser(description='Deploy Cluster')
-parser.add_argument('--config', help='config file')
-args = parser.parse_args()
+    def create_new_file(self, file_out, data_dict):
+        tpl_content = Template(open(self.template).read())
+        new_content = tpl_content.safe_substitute(data_dict)
+
+        with open(file_out, 'w+') as file:
+            file.write(new_content)
+            self.log.output(log_message=file_out, header='[TEMPLATE][create]', show_state='complete')
+
+
+# parser = argparse.ArgumentParser(description='Deploy Cluster')
+# parser.add_argument('--config', help='config file')
+# args = parser.parse_args()
 
 # print(args.config)
 
@@ -101,4 +115,29 @@ args = parser.parse_args()
 # p_shell.input(input="echo 'hello'")
 # print(p_shell.response_lines())
 
+# TEMPLATE
+# tpl=UseTemplate('./test.tpl')
+# tpl.create_new_file(file_out='./test.out', data_dict={'key': 'value', 'foo': 'bar'})
+
+IP_DETECT="/opt/dcos_bootstrap/genconf/ip-detect"
+
+
+def cli_menu_parser():
+    parser = argparse.ArgumentParser(description='Deploy Cluster')
+    parser.add_argument('--config', help='config file in yaml')
+
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = cli_menu_parser()
+
+    with open(args.config) as f_stream:
+        configs=yaml.load(f_stream)
+
+    print(configs)
+
+    ip_detect = UseTemplate('../template/config.yaml')
+    ip_detect.create_new_file(file_out = IP_DETECT,
+                              data_dict = {'ROUTE_DESTINATION': configs.get('bootstrap_node').get('ip')})
 

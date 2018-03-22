@@ -2,7 +2,7 @@
 FROM alpine:3.7
 
 # RUN apk --update add --nocache openssh curl openjdk8 procps coreutils -v
-RUN apk --update add bash openssh python3 py3-paramiko py3-yaml -v
+RUN apk --update add bash openssh curl python3 py3-paramiko py3-yaml -v
 
 # CONFIGS
 ARG SETUP_ROOT='/opt/dcos_setup'
@@ -11,7 +11,7 @@ ARG DCOS_SCRIPT_ARCHIVE='https://downloads.dcos.io/dcos/stable/dcos_generate_con
 
 # SETUP
 RUN mkdir -p $SETUP_ROOT
-RUN mkdir -p $BOOTSTRAP_ROOT
+RUN mkdir -p $BOOTSTRAP_ROOT/genconf
 COPY ./tool $SETUP_ROOT/
 
 # DOWNLOAD DCOS

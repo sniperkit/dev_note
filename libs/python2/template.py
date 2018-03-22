@@ -3,6 +3,8 @@ from log import Log
 
 
 class UseTemplate():
+    # https://stackoverflow.com/questions/6385686/python-technique-or-simple-templating-system-for-plain-text-output
+
     def __init__(self, template):
         self.template=template
         self.log=Log()

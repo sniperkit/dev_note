@@ -1,3 +1,4 @@
+import subprocess
 import paramiko
 import time
 from log import Log
@@ -27,7 +28,7 @@ class SshSession():
 
 
 class Shell():
-    def __init__(self, session):
+    def __init__(self, session=None):
         self.session = session.invoke_shell()
 
         self.retry_expire = int('60')
@@ -35,8 +36,17 @@ class Shell():
 
         self.linebreak = str('\n')
 
-    def input(self, input):
-        self.session.send(input + self.linebreak)
+    def local(self, command):
+        pid = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+        lines = []
+        for line in pid.stdout.readlines():
+            lines.append(line)
+
+        return lines
+
+    def remote(self, command):
+        self.session.send(command + self.linebreak)
 
     def response_byte(self):
         timeout = round(time.time()) + self.retry_expire
@@ -49,7 +59,6 @@ class Shell():
 
     def response_lines(self):
         lines = []
-
         for line in self.response_byte().decode('utf8').split(self.linebreak):
             lines.append(line.strip())
 

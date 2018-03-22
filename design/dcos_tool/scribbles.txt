@@ -1,0 +1,17 @@
+base_os: alpine
+base_os_version: 3.7
+base_os_type: docker container
+programe: bash, python3
+
+folder structure:
++- python
+  +- lib
++- sbin
++- setup.sh
+
+
+setup.sh cli:
++-- all
++-- config
+
+

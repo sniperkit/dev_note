@@ -2,32 +2,27 @@
 FROM alpine:3.7
 
 # RUN apk --update add --nocache openssh curl openjdk8 procps coreutils -v
-RUN apk --update add bash openssh curl python3 py3-paramiko py3-yaml -v
+RUN apk --update add bash openssh curl docker python3 py3-paramiko py3-yaml -v
 
 # CONFIGS
-ARG SETUP_ROOT='/opt/dcos_setup'
-ARG BOOTSTRAP_ROOT='/opt/dcos_bootstrap'
-ARG BOOTSTRAP_SCRIPT_ARCHIVE='https://downloads.dcos.io/dcos/stable/dcos_generate_config.sh'
+ENV SETUP_ROOT='/opt/dcos_setup'
+ENV BOOTSTRAP_ROOT='/opt/dcos_bootstrap'
+ENV BOOTSTRAP_SCRIPT_ARCHIVE='https://downloads.dcos.io/dcos/stable/dcos_generate_config.sh'
+ENV BOOTSTRAP_EXPOSE_PORT='10080'
 
 # SETUP
 RUN mkdir -p $SETUP_ROOT
 RUN mkdir -p $BOOTSTRAP_ROOT/genconf
-COPY ./tool $SETUP_ROOT/
 
-# DOWNLOAD DCOS
+#COPY ./setup/tmp/dcos_bootstrap $BOOTSTRAP_ROOT
+#COPY ../setup $BOOTSTRAP_ROOT/
+
 RUN curl -o $BOOTSTRAP_ROOT/dcos_generate_config.sh $BOOTSTRAP_SCRIPT_ARCHIVE
 
-## SPARK
-#ARG SPARK_VERSION=2.3.0
-#ARG SPARK_ARCHIVE=http://ftp.twaren.net/Unix/Web/apache/spark/spark-$SPARK_VERSION/spark-$SPARK_VERSION-bin-hadoop2.7.tgz
-#RUN curl -s $SPARK_ARCHIVE | tar -xz -C /usr/local/
-#
-#ENV SPARK_HOME /usr/local/spark-$SPARK_VERSION-bin-hadoop2.7
-#ENV PATH $PATH:$SPARK_HOME/bin
-#
-##EXPOSE 4040 6066 7077 8080
-#
-#WORKDIR $SPARK_HOME
-##ENTRYPOINT ./sbin/start-master.sh
-##ENTRYPOINT ./sbin/start-slave.sh spark://<--MASTER_NODE-->:7077
-##docker run -p 38080:8080 -dit alpine/spark-2.3.0b  /bin/bash -c "./sbin/start-master.sh && /bin/bash"
+# RUN
+WORKDIR $SETUP_ROOT
+#ENTRYPOINT ["python3", "./main.py", "--config", "/opt/dcos_setup/setup.yaml", "--action", "full"]
+ENTRYPOINT ["/bin/bash"]
+
+
+# EXPOSE 4040 6066 7077 8080

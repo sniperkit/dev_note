@@ -1,8 +1,9 @@
 ---
 cluster_name: test_cluster
 bootstrap_node:
-  addr: 192.168.201.100
+  addr: 192.168.201.101
   port: 10800
+  archive: https://downloads.dcos.io/dcos/stable/dcos_generate_config.sh
 master_nodes:
   addr:
     - 192.168.201.112

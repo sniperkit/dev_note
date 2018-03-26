@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python36
 # -*- coding: utf-8 -*-
 
 import os
@@ -72,7 +72,7 @@ def bootstrap(configs):
 
     # bootstrap_session = Shell()
 
-    command = "cd {0} && ./dcos_generate_config.sh".format(BOOTSTRAP_ROOT)
+    command = "cd {0} && /bin/bash ./dcos_generate_config.sh".format(BOOTSTRAP_ROOT)
     # command = "cntr=0; while [[ $cntr -lt 10 ]]; do sleep 1; echo $cntr; cntr=$((cntr+1)); done"
     # command = "error"
     bootstrap_session.local(command)

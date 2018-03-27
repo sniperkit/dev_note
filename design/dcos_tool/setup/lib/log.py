@@ -25,7 +25,7 @@ class Log:
         if show_state == 'error' or show_state == 'err_nostate' or header == '[ERROR]':
             print(self.fg_bold + ts + header + ' ' + log_message + msg_out + self.fg_reset)
         else:
-            print(self.fg_lightgrey + ts + header + ' ' + log_message + self.fg_reset + msg_out)
+            print(ts + header + ' ' + log_message + msg_out)
 
 
 class LogError:

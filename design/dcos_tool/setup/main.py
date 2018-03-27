@@ -96,7 +96,7 @@ def deploy_agent(configs):
 
 
 if __name__ == "__main__":
-    # require: paramiko, pyyaml, ntpd
+    # require: paramiko, pyyaml, ntpd, group nogroup
     args = cli_menu_parser()
     print(args)
 

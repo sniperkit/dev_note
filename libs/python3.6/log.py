@@ -54,7 +54,7 @@ class Log():
         if show_state == 'complete': msg_out = " ... " + self.fg_green + 'COMPLETE' + self.fg_reset
         if show_state == 'ok': msg_out = " ... " + self.fg_green + 'OK' + self.fg_reset
 
-        if show_state == 'error' or header == '[ERROR]':
+        if show_state == 'error' or show_state == 'err_nostate' or header == '[ERROR]':
             print(self.fg_bold + ts + header + ' ' + log_message + msg_out + self.fg_reset)
         else:
             print(self.fg_lightgrey + ts + header + ' ' + log_message + self.fg_reset + msg_out)
@@ -63,37 +63,55 @@ class Log():
 class LogError:
     def __init__(self, **kwargs):
         self.log = Log()
-        self.bad_local_cmd_return = kwargs.get('BAD_LOCAL_CMD_RETURN', None)
+
+        self.stderr = kwargs.get('STDERR', None)
+        self.local_cmd_return = kwargs.get('BAD_LOCAL_CMD_RETURN', None)
 
         self.msg = None
         self.header = "[ERROR]"
         self.show_state = "error"
 
         self._shell()
+        self._stderr()
 
         self.log.output(log_message=self.msg, header=self.header, show_state=self.show_state)
 
+    def _stderr(self):
+        if self.stderr is not None:
+            self.msg = self.stderr.get("stderr")
+            self.header = "[ERROR]"
+            self.show_state = 'err_nostate'
+
     def _shell(self):
-        if self.bad_local_cmd_return is not None:
-            self.msg = self.bad_local_cmd_return.get("cmd")
-            self.header = "[SHELL][local]<return_code: {}>".format(self.bad_local_cmd_return.get("return_code"))
+        if self.local_cmd_return is not None:
+            self.msg = self.local_cmd_return.get("cmd")
+            self.header = "[SHELL][local]<return_code: {}>".format(self.local_cmd_return.get("return_code"))
 
 
 class LogNormal:
     def __init__(self, **kwargs):
         self.log = Log()
-        self.norm_local_cmd_return = kwargs.get('NORM_LOCAL_CMD_RETURN', None)
+
+        self.template_create_new = kwargs.get('NORM_CREATE_TEMPLATE', None)
+        self.local_cmd_return = kwargs.get('NORM_LOCAL_CMD_RETURN', None)
 
         self.msg = None
         self.header = "[NORMAL]"
         self.show_state = "normal"
 
         self._shell()
+        self._template()
 
         self.log.output(log_message=self.msg, header=self.header, show_state=self.show_state)
 
     def _shell(self):
-        if self.norm_local_cmd_return is not None:
-            self.msg = self.norm_local_cmd_return.get("cmd")
+        if self.local_cmd_return is not None:
+            self.msg = self.local_cmd_return.get("cmd")
             self.header = "[SHELL][local]"
+
+    def _template(self):
+        if self.template_create_new is not None:
+            self.msg = self.template_create_new.get("new_file")
+            self.header = "[TEMPLATE][create]"
+
 

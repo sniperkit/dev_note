@@ -57,17 +57,24 @@ class Shell():
 
         if not return_code == 0 and not ignore_err:
             LogError(BAD_LOCAL_CMD_RETURN={ "cmd": command, "return_code": return_code})
+            for line in popen.stderr.readlines():
+                LogError(STDERR={"stderr": line.decode('utf8')})
         else:
-            LogNormal(NORM_LOCAL_CMD_RETURN={ "cmd": command })
+            LogNormal(NORM_LOCAL_CMD_RETURN={"cmd": command})
 
     def remote(self, command):
-        self.session.send(command + split_byte_to_lines)
-        self.log.output(log_message=command, header="[SHELL][remote]", show_state='complete')
+        chn = self.session.get_transport().open_session()
 
-        timeout = round(time.time()) + self.retry_expire
-        while time.time() < timeout:
+        chn.settimeout(10800)
+        chn.exec_command(command)
+        LogNormal(NORM_REMOTE_CMD_RETURN={"cmd": command})
+
+        while not chn.exit_status_ready():
             time.sleep(self.retry_interval)
+            print(chn.exit_status_ready())
+            if chn.recv_ready():
+                data_buffer = '\n'.join(split_byte_to_lines(input_byte=chn.recv(1024)))
 
-            if self.session.recv_ready():
-                out = '\n'.join(split_byte_to_lines(input_byte=self.session.recv(1024)))
-                self.log.output(log_message=out, header="[SHELL][remote]")
+                while data_buffer:
+                    LogNormal(STDOUT={"stdout": data_buffer})
+                    data_buffer = '\n'.join(split_byte_to_lines(input_byte=chn.recv(1024)))

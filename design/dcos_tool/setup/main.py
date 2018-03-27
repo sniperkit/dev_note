@@ -92,11 +92,30 @@ def deploy_master(configs):
 
 
 def deploy_agent(configs):
-    pass
+    for host in configs.get('agent_nodes').get('addr'):
+        try:
+            _session = SshSession(
+                dest_host=host,
+                dest_user=configs.get('agent_nodes').get('username'),
+                dest_password=configs.get('agent_nodes').get('password'))
+
+            agent_session = Shell(session=_session.login_with_password())
+
+            command = "curl -o /tmp/dcos_install.sh http://{0}:{1}/dcos_install.sh".format(
+                configs.get('bootstrap_node').get('addr'),
+                configs.get('bootstrap_node').get('port'))
+            agent_session.remote(command=command)
+
+            command = "sudo /bin/bash /tmp/dcos_install.sh slave"
+            agent_session.remote(command=command)
+
+        finally:
+            if agent_session.session:
+                agent_session.session.close()
 
 
 if __name__ == "__main__":
-    # require: paramiko, pyyaml, ntpd, group nogroup
+    # require: paramiko, pyyaml, ntpd, group nogroup, mount -o remount,exec /tmp
     args = cli_menu_parser()
     print(args)
 

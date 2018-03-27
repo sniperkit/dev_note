@@ -218,6 +218,8 @@ function yum_setup_pip3() {
 }
 
 function pip_install() {
+  # curl https://bootstrap.pypa.io/get-pip.py | python3
+
   local version=$1
   local method=$2
   local source=$3

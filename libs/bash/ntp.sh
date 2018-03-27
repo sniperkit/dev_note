@@ -64,3 +64,7 @@ EOF`
   overwrite_content "${_content}" "/etc/ntp.conf"
   systemctl start ntpd
 }
+
+function ntp_sync_state() {
+  timedatectl status
+}

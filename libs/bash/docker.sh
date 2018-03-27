@@ -3,6 +3,8 @@
 . ./file_and_dir.sh
 . ./default_paths.sh
 
+# https://www.centos.bz/2017/01/dockerd-launch-the-docker-daemon/
+
 function create_docker_repo_file {
   local _repo_config='/etc/yum.repos.d/docker.repo'
   local _config_content=`cat << EOF
@@ -145,4 +147,20 @@ function add_insecure_docker_registry {
     ]
 }
 EOF`
+}
+
+function docker_nest_docker {
+  # https://github.com/moby/moby/blob/master/hack/dind
+  # This script should be executed inside a docker container in privileged mode
+  mount -t securityfs none /sys/kernel/security
+}
+
+function docker_run_docker {
+#  http://jpetazzo.github.io/2015/09/03/do-not-use-docker-in-docker-for-ci/
+  docker run -v /var/run/docker.sock:/var/run/docker.sock -it dcos/setup /bin/bash
+}
+
+function check_docker_config {
+  # https://raw.githubusercontent.com/docker/docker/master/contrib/check-config.sh
+  :
 }

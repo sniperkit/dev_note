@@ -19,8 +19,6 @@ class Log:
         msg_out = ''
         if show_state == 'error': msg_out = " ... " + self.fg_red + 'ERROR' + self.fg_reset
         if show_state == 'normal': msg_out = " ... " + self.fg_green + 'NORMAL' + self.fg_reset
-        if show_state == 'complete': msg_out = " ... " + self.fg_green + 'COMPLETE' + self.fg_reset
-        if show_state == 'ok': msg_out = " ... " + self.fg_green + 'OK' + self.fg_reset
 
         if show_state == 'error' or show_state == 'err_nostate' or header == '[ERROR]':
             print(self.fg_bold + ts + header + ' ' + log_message + msg_out + self.fg_reset)
@@ -31,16 +29,19 @@ class Log:
 class LogError:
     def __init__(self, **kwargs):
         self.log = Log()
+
         self.stderr = kwargs.get('STDERR', None)
-        self.bad_local_cmd_return = kwargs.get('BAD_LOCAL_CMD_RETURN', None)
-        self.bad_remote_cmd_return = kwargs.get('BAD_REMOTE_CMD_RETURN', None)
+
+        self.ssh_connect = kwargs.get('SSH_CONNECT', None)
+
+        self.local_cmd_return = kwargs.get('LOCAL_CMD_RETURN', None)
+        self.remote_cmd_return = kwargs.get('REMOTE_CMD_RETURN', None)
 
         self.msg = None
         self.header = "[ERROR]"
         self.show_state = "error"
 
         self._shell()
-        self._remote_shell()
         self._stderr()
 
         self.log.output(log_message=self.msg, header=self.header, show_state=self.show_state)
@@ -51,15 +52,18 @@ class LogError:
             self.header = "[ERROR]"
             self.show_state = 'err_nostate'
 
-    def _shell(self):
-        if self.bad_local_cmd_return is not None:
-            self.msg = self.bad_local_cmd_return.get("cmd")
-            self.header = "[SHELL][local]<return_code: {}>".format(self.bad_local_cmd_return.get("return_code"))
+    def _session(self):
+        if self.ssh_connect is not None:
+            self.header = "[SESSION][ssh][connect]"
 
-    def _remote_shell(self):
-        if self.bad_remote_cmd_return is not None:
-            self.msg = self.bad_remote_cmd_return.get("cmd")
-            self.header = "[SHELL][remote]<return_code: {}>".format(self.bad_remote_cmd_return.get("return_code"))
+    def _shell(self):
+        if self.local_cmd_return is not None:
+            self.msg = self.local_cmd_return.get("cmd")
+            self.header = "[SHELL][local]<return_code: {}>".format(self.local_cmd_return.get("return_code"))
+
+        if self.remote_cmd_return is not None:
+            self.msg = self.remote_cmd_return.get("cmd")
+            self.header = "[SHELL][remote]<return_code: {}>".format(self.remote_cmd_return.get("return_code"))
 
 
 class LogNormal:
@@ -68,17 +72,20 @@ class LogNormal:
 
         self.stdout = kwargs.get('STDOUT', None)
 
-        self.template_create_new = kwargs.get('NORM_CREATE_TEMPLATE', None)
-        self.local_cmd_return = kwargs.get('NORM_LOCAL_CMD_RETURN', None)
-        self.remote_cmd_return = kwargs.get('NORM_REMOTE_CMD_RETURN', None)
+        self.ssh_connect = kwargs.get('SSH_CONNECT', None)
 
-        self.msg = None
+        self.template_create_new = kwargs.get('CREATE_TEMPLATE', None)
+
+        self.local_cmd_return = kwargs.get('LOCAL_CMD_RETURN', None)
+        self.remote_cmd_return = kwargs.get('REMOTE_CMD_RETURN', None)
+
+        self.msg = ''
         self.header = "[NORMAL]"
         self.show_state = "normal"
 
         self._stdout()
+        self._session()
         self._shell()
-        self._remote_shell()
         self._template()
 
         self.log.output(log_message=self.msg, header=self.header, show_state=self.show_state)
@@ -89,12 +96,15 @@ class LogNormal:
             self.header = "[STDOUT]"
             self.show_state = ''
 
+    def _session(self):
+        if self.ssh_connect is not None:
+            self.header = "[SESSION][ssh][connect]"
+
     def _shell(self):
         if self.local_cmd_return is not None:
             self.msg = self.local_cmd_return.get("cmd")
             self.header = "[SHELL][local]"
 
-    def _remote_shell(self):
         if self.remote_cmd_return is not None:
             self.msg = self.remote_cmd_return.get("cmd")
             self.header = "[SHELL][remote]"

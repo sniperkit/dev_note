@@ -14,4 +14,4 @@ class UseTemplate():
 
         with open(new_file, 'w+') as file:
             file.write(new_content)
-            LogNormal(NORM_CREATE_TEMPLATE={"new_file": new_file})
+            LogNormal(CREATE_TEMPLATE={"new_file": new_file})

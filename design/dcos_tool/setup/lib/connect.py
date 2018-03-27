@@ -4,7 +4,6 @@ import subprocess
 import time
 import os
 import paramiko
-from .log import Log
 from .log import LogNormal, LogError
 
 from .utils import split_lines
@@ -15,20 +14,19 @@ class SshSession():
         self.host=str(dest_host)
         self.username=str(dest_user)
         self.password=str(dest_password)
-        self.log=Log()
 
     def login_with_password(self):
         p_ssh = paramiko.SSHClient()
         p_ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
             p_ssh.connect(hostname=self.host, username=self.username, password=self.password)
-            self.log.output(log_message='connect', header='[SESSION][ssh]', show_state='ok')
+            LogNormal(SSH_CONNECT={})
 
             return p_ssh
 
         except (paramiko.ssh_exception.SSHException, paramiko.ssh_exception.NoValidConnectionsError) as e:
-            self.log.output(log_message='connect', header='[SESSION][ssh]', show_state='error')
-            self.log.output(log_message=str(e), header='[SESSION][error]')
+            LogError(SSH_CONNECT={})
+            LogError(STDERR={"stderr": e})
 
             return None
 
@@ -39,8 +37,6 @@ class Shell():
 
         self.retry_expire = int('60')
         self.retry_interval = int('1')
-
-        self.log = Log()
 
     @staticmethod
     def local(command, ignore_err=False):
@@ -58,18 +54,18 @@ class Shell():
         return_code = popen.wait()
 
         if not return_code == 0 and not ignore_err:
-            LogError(BAD_LOCAL_CMD_RETURN={"cmd": command, "return_code": return_code})
+            LogError(LOCAL_CMD_RETURN={"cmd": command, "return_code": return_code})
             for line in popen.stderr.readlines():
                 LogError(STDERR={"stderr": line.decode('utf8')})
         else:
-            LogNormal(NORM_LOCAL_CMD_RETURN={ "cmd": command })
+            LogNormal(LOCAL_CMD_RETURN={"cmd": command})
 
     def remote(self, command):
         chn = self.session.get_transport().open_session()
 
         chn.settimeout(10800)
         chn.exec_command(command)
-        LogNormal(NORM_REMOTE_CMD_RETURN={"cmd": command})
+        LogNormal(REMOTE_CMD_RETURN={"cmd": command})
 
         while not chn.exit_status_ready():
             time.sleep(self.retry_interval)
@@ -82,4 +78,4 @@ class Shell():
                     data_buffer = '\n'.join(split_lines(input_byte=chn.recv(1024)))
 
         if chn.recv_exit_status() is not 0:
-            LogError(BAD_REMOTE_CMD_RETURN={"cmd": command, "return_code": chn.recv_exit_status()})
+            LogError(REMOTE_CMD_RETURN={"cmd": command, "return_code": chn.recv_exit_status()})

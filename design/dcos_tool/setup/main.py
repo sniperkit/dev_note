@@ -15,12 +15,17 @@ BOOTSTRAP_SCRIPT = '/opt/dcos_bootstrap/dcos_generate_config.sh'
 
 
 def cli_menu_parser():
+    print(os.sys.argv)
     parser = argparse.ArgumentParser(description='Deploy Cluster')
 
     parser.add_argument('-a', '--action',
-                        choices=['prepare', 'bootstrap', 'deploy_master', 'deploy_agent'],
-                        help='prepare, bootstrap, deploy_master, deploy_agent',
+                        choices=['prepare', 'provision'],
+                        help='setup action <prepare, provision, deployment>',
                         required=True)
+    parser.add_argument('-n', '--node',
+                        choices=['bootstrap', 'master', 'agent'],
+                        help='node choice <bootstrap, master, agent>',
+                        required=('-a' or '--action') and 'provision' in os.sys.argv)
     parser.add_argument('-c', '--config',
                         help='config file in yaml',
                         required=True)
@@ -48,7 +53,7 @@ def prepare(configs):
     host_session.local("curl -o {0}/dcos_generate_config.sh {1}".format(BOOTSTRAP_ROOT, configs.get('bootstrap_node').get('archive')))
 
 
-def bootstrap(configs):
+def provision_bootstrap(configs):
     bootstrap_session = Shell()
 
     command = "cd {0} && /bin/bash ./dcos_generate_config.sh".format(BOOTSTRAP_ROOT)
@@ -61,7 +66,7 @@ def bootstrap(configs):
     bootstrap_session.local(command)
 
 
-def deploy_master(configs):
+def provision_master(configs):
     for host in configs.get('master_nodes').get('addr'):
         try:
             _session = SshSession(
@@ -91,7 +96,7 @@ def deploy_master(configs):
                 master_session.session.close()
 
 
-def deploy_agent(configs):
+def provision_agent(configs):
     for host in configs.get('agent_nodes').get('addr'):
         try:
             _session = SshSession(
@@ -124,12 +129,12 @@ if __name__ == "__main__":
 
     if args.action == 'prepare':
         prepare(configs=configs)
-    if args.action == 'bootstrap':
-        bootstrap(configs=configs)
-    if args.action == 'deploy_master':
-        deploy_master(configs=configs)
-    if args.action == 'deploy_agent':
-        deploy_agent(configs=configs)
+    if args.action == 'provision' and args.node == 'bootstrap':
+        provision_bootstrap(configs=configs)
+    if args.action == 'provision' and args.node == 'master':
+        provision_master(configs=configs)
+    if args.action == 'provision' and args.node == 'agent':
+        provision_agent(configs=configs)
 
 
 

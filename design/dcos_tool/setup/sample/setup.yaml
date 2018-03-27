@@ -8,10 +8,10 @@ master_nodes:
   addr:
     - 192.168.201.112
   username: root
-  password: object close funny pass
+  password: 'object close funny pass'
 agent_nodes:
   addr:
     - 192.168.201.999
-  username: admin
-  password: @dmin!234
+  username: root
+  password: 'object close funny pass'
 ...

@@ -4,7 +4,7 @@ import os
 
 
 class MetaConfig:
-    BOOTSTRAP_ROOT = os.path.abspath('../tmp/dcos_bootstrap')
+    BOOTSTRAP_ROOT = os.path.abspath('./tmp/dcos_bootstrap')
     BOOTSTRAP_SCRIPT = '/opt/dcos_bootstrap/dcos_generate_config.sh'
 
     IP_DETECT = "genconf/ip-detect"

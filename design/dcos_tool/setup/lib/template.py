@@ -11,7 +11,6 @@ class UseTemplate():
     def create_new_file(self, new_file, data_dict):
         tpl_content = Template(open(self.template).read())
         new_content = tpl_content.safe_substitute(data_dict)
-        print(new_file)
 
         with open(new_file, 'w+') as file:
             file.write(new_content)

@@ -1,13 +1,17 @@
 ---
 cluster_name: test_cluster
 bootstrap_node:
-  addr: 192.168.201.101
+  addr: 192.168.201.112
   port: 10800
   archive: https://downloads.dcos.io/dcos/stable/dcos_generate_config.sh
 master_nodes:
   addr:
     - 192.168.201.112
+  username: root
+  password: object close funny pass
 agent_nodes:
   addr:
     - 192.168.201.999
+  username: admin
+  password: @dmin!234
 ...

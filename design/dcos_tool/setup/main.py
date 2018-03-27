@@ -6,32 +6,9 @@ import argparse
 import yaml
 
 from lib.template import UseTemplate
-from lib.connect import Shell
+from lib.connect import Shell, SshSession
 
-# parser = argparse.ArgumentParser(description='Deploy Cluster')
-# parser.add_argument('--config', help='config file')
-# args = parser.parse_args()
-
-# print(args.config)
-
-# PARSE YAML
-# with open(args.config) as f_stream:
-#     _config=yaml.load(f_stream)
-# print(_config.get('a list')[0])
-
-# SSH CONNECT
-# p_session=SshSession(dest_host="192.168.201.112", dest_password="", dest_user="root")
-
-# SSH COMMAND
-# p_shell=Shell(session=p_session.login_with_password())
-# p_shell.input(input="echo 'hello'")
-# print(p_shell.response_lines())
-
-# TEMPLATE
-# tpl=UseTemplate('./test.tpl')
-# tpl.create_new_file(file_out='./test.out', data_dict={'key': 'value', 'foo': 'bar'})
-
-BOOTSTRAP_ROOT = './tmp/dcos_bootstrap'
+BOOTSTRAP_ROOT = os.path.abspath('./tmp/dcos_bootstrap')
 IP_DETECT = "genconf/ip-detect"
 CONFIG_YAML = 'genconf/config.yaml'
 BOOTSTRAP_SCRIPT = '/opt/dcos_bootstrap/dcos_generate_config.sh'
@@ -40,8 +17,13 @@ BOOTSTRAP_SCRIPT = '/opt/dcos_bootstrap/dcos_generate_config.sh'
 def cli_menu_parser():
     parser = argparse.ArgumentParser(description='Deploy Cluster')
 
-    parser.add_argument('--action', choices=['prepare', 'bootstrap'], help='prepare, bootstrap (default: %(default))', )
-    parser.add_argument('-c', '--config', help='config file in yaml')
+    parser.add_argument('-a', '--action',
+                        choices=['prepare', 'bootstrap', 'deploy_master', 'deploy_agent'],
+                        help='prepare, bootstrap, deploy_master, deploy_agent',
+                        required=True)
+    parser.add_argument('-c', '--config',
+                        help='config file in yaml',
+                        required=True)
 
     return parser.parse_args()
 
@@ -68,47 +50,68 @@ def prepare(configs):
 
 def bootstrap(configs):
     bootstrap_session = Shell()
-    # bootstrap_session.local("curl -o {0} {1}".format(BOOTSTRAP_SCRIPT, configs.get('bootstrap_node').get('archive')))
-
-    # bootstrap_session = Shell()
 
     command = "cd {0} && /bin/bash ./dcos_generate_config.sh".format(BOOTSTRAP_ROOT)
-    # command = "cntr=0; while [[ $cntr -lt 10 ]]; do sleep 1; echo $cntr; cntr=$((cntr+1)); done"
-    # command = "error"
+    bootstrap_session.local(command)
+
+    command = "docker run -d -p {0}:80 -v {1}/genconf/serve:/usr/share/nginx/html:ro nginx".format(
+        configs.get('bootstrap_node').get('port'),
+        BOOTSTRAP_ROOT
+    )
     bootstrap_session.local(command)
 
 
+def deploy_master(configs):
+    for host in configs.get('master_nodes').get('addr'):
+        try:
+            _session = SshSession(
+                dest_host=host,
+                dest_user=configs.get('master_nodes').get('username'),
+                dest_password=configs.get('master_nodes').get('password'))
+
+            master_session = Shell(session=_session.login_with_password())
+
+            command = "curl -o /tmp/dcos_install.sh http://{0}:{1}/dcos_install.sh".format(
+                configs.get('bootstrap_node').get('addr'),
+                configs.get('bootstrap_node').get('port'))
+            master_session.remote(command=command)
+
+            if configs.get('bootstrap_node').get('addr') == host:
+                sed_find = "^systemctl restart docker"
+                sed_replace = "docker run -d -p {0}:80 -v {1}/genconf/serve:/usr/share/nginx/html:ro nginx".format(
+                    configs.get('bootstrap_node').get('port'), BOOTSTRAP_ROOT)
+                command = "sed -E -i 's#{0}#& \\n{1}#' /tmp/dcos_install.sh".format(sed_find, sed_replace)
+                master_session.local(command)
+
+            command = "/bin/bash /tmp/dcos_install.sh master"
+            master_session.remote(command=command)
+
+        finally:
+            if master_session.session:
+                master_session.session.close()
+
+
+def deploy_agent(configs):
+    pass
+
+
 if __name__ == "__main__":
+    # require: paramiko, pyyaml, ntpd
     args = cli_menu_parser()
     print(args)
 
     with open(args.config) as f_stream:
         configs=yaml.load(f_stream)
 
-    # ip_detect = UseTemplate('./template/ip-detect.tpl')
-    # ip_detect.create_new_file(file_out=IP_DETECT,
-    #                           data_dict={
-    #                               'ROUTE_DESTINATION': configs.get('bootstrap_node').get('addr')
-    #                           })
-    #
-    # config_yaml = UseTemplate('./template/config.yaml.tpl')
-    # config_yaml.create_new_file(file_out=CONFIG_YAML,
-    #                             data_dict={
-    #                                 'CLUSTER_NAME': configs.get('cluster_name'),
-    #                                 'BOOTSTRAP_HOST': configs.get('bootstrap_node').get('addr'),
-    #                                 'BOOTSTRAP_PORT': configs.get('bootstrap_node').get('port'),
-    #                                 'MASTER_HOSTS': '\n- '.join(configs.get('master_nodes').get('addr'))
-    #                             })
-
     if args.action == 'prepare':
         prepare(configs=configs)
     if args.action == 'bootstrap':
         bootstrap(configs=configs)
-        # bootstrap(configs=configs)
+    if args.action == 'deploy_master':
+        deploy_master(configs=configs)
+    if args.action == 'deploy_agent':
+        deploy_agent(configs=configs)
 
-
-    # p_localshell = Shell().local(command=BOOTSTRAP_SCRIPT)
-    # print(Shell().local(command=BOOTSTRAP_SCRIPT))
 
 
 

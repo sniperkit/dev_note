@@ -4,6 +4,8 @@
 . ./default_paths.sh
 
 # https://www.centos.bz/2017/01/dockerd-launch-the-docker-daemon/
+# http://www.dockerinfo.net/2889.html
+# http://www.zoues.com/2017/06/23/译见-奇妙的-docker-使用技巧十连发【zoues-com】/
 
 function create_docker_repo_file {
   local _repo_config='/etc/yum.repos.d/docker.repo'

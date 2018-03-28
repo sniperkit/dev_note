@@ -1,7 +1,8 @@
 # https://developer.atlassian.com/blog/2015/08/minimal-java-docker-containers/
-FROM alpine:3.7.0
+FROM alpine:3.7
 
-RUN apk --update add --nocache openssh curl openjdk8 procps coreutils-v
+# RUN apk --update add --nocache openssh curl openjdk8 procps coreutils -v
+RUN apk --update add openssh curl openjdk8 procps coreutils bash -v
 
 # SPARK
 ARG SPARK_VERSION=2.3.0
@@ -14,5 +15,7 @@ ENV PATH $PATH:$SPARK_HOME/bin
 #EXPOSE 4040 6066 7077 8080
 
 WORKDIR $SPARK_HOME
+CMD while true; do sleep 1000; done
 #ENTRYPOINT ./sbin/start-master.sh
 #ENTRYPOINT ./sbin/start-slave.sh spark://<--MASTER_NODE-->:7077
+#docker run -p 38080:8080 -dit alpine/spark-2.3.0 /bin/bash -c "./sbin/start-master.sh && /bin/bash"

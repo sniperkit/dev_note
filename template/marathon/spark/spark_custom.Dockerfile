@@ -12,10 +12,10 @@ RUN curl -s $SPARK_ARCHIVE | tar -xz -C /usr/local/
 ENV SPARK_HOME /usr/local/spark-$SPARK_VERSION-bin-hadoop2.7
 ENV PATH $PATH:$SPARK_HOME/bin
 
-#EXPOSE 4040 6066 7077 8080
+EXPOSE 4040 6066 7077 8080
 
 WORKDIR $SPARK_HOME
-CMD while true; do sleep 1000; done
+
 #ENTRYPOINT ./sbin/start-master.sh
 #ENTRYPOINT ./sbin/start-slave.sh spark://<--MASTER_NODE-->:7077
-#docker run -p 38080:8080 -dit alpine/spark-2.3.0 /bin/bash -c "./sbin/start-master.sh && /bin/bash"
+#docker run -p 38080:8080 -dit alpine/spark-2.3.0 /bin/bash -c "./sbin/start-master.sh && spark-shell"

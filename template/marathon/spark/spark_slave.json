@@ -1,5 +1,5 @@
 {
-  "id": "/spark/master",
+  "id": "/spark/slave",
   "cpus": 0.5,
   "mem": 1024,
   "disk": 1024,
@@ -11,10 +11,10 @@
     },
     "portMappings": [
       { "containerPort": 8080, "hostPort": 0 },
-      { "containerPort": 7077, "hostPort": 0 , "labels": { "VIP_0": "spark_master:7077" } },
+      { "containerPort": 7077, "hostPort": 0 },
       { "containerPort": 6066, "hostPort": 0 },
       { "containerPort": 4040, "hostPort": 0 }
     ]
   },
-  "cmd": "./sbin/start-master.sh && spark-shell"
+  "cmd": "./sbin/start-slave.sh spark://spark-master.marathon.l4lb.thisdcos.directory:7077 && spark-shell"
 }

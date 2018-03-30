@@ -12,6 +12,5 @@
     "portMappings": [
       { "containerPort": 9092, "hostPort": 0 }
     ]
-  },
-  "cmd": "bin/kafka-server-start.sh config/server.properties"
+  }
 }

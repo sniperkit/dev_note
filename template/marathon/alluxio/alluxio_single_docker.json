@@ -1,0 +1,16 @@
+{
+  "id": "/alluxio/single",
+  "cpus": 0.5,
+  "mem": 1024,
+  "disk": 1024,
+  "networks": [ { "mode": "container/bridge" } ],
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "172.27.11.167:5000/alpine/alluxio-1.7.1-hadoop-2.8/single"
+    },
+    "portMappings": [
+      { "containerPort": 19998, "hostPort": 0, "labels": { "VIP_0": "alluxio-single:19998" } }
+    ]
+  }
+}

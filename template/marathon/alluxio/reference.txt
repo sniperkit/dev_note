@@ -1,0 +1,12 @@
+alluxio_version: 1.7.1
+hadoop_version: 2.2
+archive: http://downloads.alluxio.org/downloads/files/<ALLUXIO_VERSION>/alluxio-<ALLUXIO_VERSION>-bin.tar.gz
+info: setup standalone alluxio
+node: single
+minimal_requirement:
++-- cpu: no specific requirement
++-- mem: no specific requirement
++-- disk: no specific requirement
+
+#setup
+https://www.alluxio.org/docs/master/en/Running-Alluxio-On-Docker.html

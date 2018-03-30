@@ -76,11 +76,13 @@ function set_docker_storage() {
   # https://sanenthusiast.com/change-default-image-container-location-docker/
 
   local _storage_dir=$1 #sample:-/opt/docker_volume
-  local _service_unit='/etc/systemd/system/docker.service.d/docker.conf'
+  local _registry_host=$2
+  local _service_unit='/etc/systemd/system/docker.service.d/override.conf'
   local _service_unit_content=`cat << EOL
 [Service]
 Environment="DOCKER_STORAGE_OPTIONS=--storage-driver=overlay"
 Environment="DOCKER_RUNTIME_OPTIONS=--graph=${_storage_dir}"
+Environment="DOCKER_INSECURE_OPTION=--insecure-registry=${_registry_host}:5000"
 ExecStart=
 ExecStart=/usr/bin/dockerd \\${DOCKER_STORAGE_OPTIONS} \\${DOCKER_RUNTIME_OPTIONS}
 EOL
@@ -134,9 +136,36 @@ function get_docker_command {
   docker inspect  -f "{{.Name}} {{.Config.Cmd}}" $(docker ps -a -q)
 }
 
-function setup_docker_registry {
+function setup_docker_registry_simple {
   # https://philipzheng.gitbooks.io/docker_practice/content/repository/local_repo.html
+  # https://kairen.github.io/2016/01/02/container/docker-registry/
   docker run -d -p 5000:5000 --name registry registry:2
+}
+
+function setup_docker_registry_with_credential {
+  # https://stackoverflow.com/questions/38247362/how-i-can-use-docker-registry-with-login-password
+#  docker run -d -p 5000:5000 --name registry registry:2
+  local _auth_dir='/etc/docker/registry/auth'
+  mkdir -p ${_auth_dir}
+  docker run --entrypoint htpasswd registry:2 -Bbn admin '@dmin!234' > ${_auth_dir}/htpasswd
+  docker run -d -p 5000:5000 \
+  --name registry_private \
+  -v ${_auth_dir}:/auth \
+  -e "REGISTRY_AUTH=htpasswd" \
+  -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
+  -e "REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd" \
+  registry:2
+}
+
+function setup_docker_registry_with_tls {
+  # https://stackoverflow.com/questions/38247362/how-i-can-use-docker-registry-with-login-password
+#  docker run -d -p 5000:5000 --name registry registry:2
+  local _cert_dir='/etc/docker/registry/certs'
+  mkdir -p ${_cert_dir}
+  docker run -d --name registry_private -v ${_cert_dir}:/certs -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key -p 5000:5000 registry:2
+  # on dest node
+  # mkdir -p /etc/docker/certs.d/172.27.11.167:5000
+  # scp ./certs/domain.crt root@172.27.11.164:/etc/docker/certs.d/172.27.11.167:5000
 }
 
 function add_insecure_docker_registry {
@@ -165,4 +194,12 @@ function docker_run_docker {
 function check_docker_config {
   # https://raw.githubusercontent.com/docker/docker/master/contrib/check-config.sh
   :
+}
+
+function get_docker_registry {
+  curl -X GET https://172.27.11.167:5000/v2/_catalog
+}
+
+function del_docker_registry_image {
+  curl -X DELETE localhost:5000/v1/repositories/ubuntu/tags/latest
 }

@@ -10,7 +10,7 @@ auto eth0
 iface eth0 inet dhcp
 
 auto eth1
-iface eth0 inet dhcp
+iface eth1 inet dhcp
 EOF`
   overwrite_content "${_content}" "${NETWORK_INTERFACE_CONFIG}"
 }

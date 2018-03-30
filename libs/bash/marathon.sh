@@ -1,4 +1,6 @@
 # https://docs.mesosphere.com/pdf/1.10/deploying-services/marathon-api/1.10-deploying-services-marathon-api.pdf
+# https://mesosphere.github.io/marathon/docs/recipes.html
+# https://mesosphere.github.io/marathon/docs/native-docker.html
 
 . ./curl.sh
 
@@ -38,6 +40,17 @@ function marathon_get_logging {
   curl -X GET http://${_host}/logging| python -mjson.tool
 }
 
+function marathon_deploy_mesos_container {
+  # registry
+  # openssl req -newkey rsa:2048 -nodes -keyout certs/domain.key -x509 -days 365 -out certs/domain.crt -subj '/CN=172.27.11.167'
+  cd /var/lib/dcos/pki/tls/certs
+  cat <CRT_CONTENT> >> ./domain.crt
+  ln -s "domain.crt" "$(openssl x509 -hash -noout -in domain.crt)".0
+
+}
+
  curl -X POST http://192.168.201.102:8080/logging -d "DEBUG"
 
 marathon_deploy_app "192.168.201.108:8080" "/tmp/marathon/sample.json"
+
+<service>.<group>.<framework>.mesos

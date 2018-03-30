@@ -5,7 +5,7 @@
   "disk": 1024,
   "networks": [ { "mode": "container/bridge" } ],
   "container": {
-    "type": "DOCKER",
+    "type": "MESOS",
     "docker": {
       "image": "172.27.11.167:5000/alpine/alluxio-1.7.1-hadoop-2.8/single"
     },

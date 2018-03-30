@@ -1,0 +1,12 @@
+kafka_version: 1.0.1
+scarla_version: 2.12
+archive: https://archive.apache.org/dist/kafka/<KAFKA_VERSION>/kafka_<SCALA_VERSION>-<KAFKA_VERSION>.tgz
+info: setup standalone kafka
+node: ?
+minimal_requirement:
++-- cpu: no specific requirement
++-- mem: no specific requirement, but rumor less than 32 GB tends to be counterproductive
++-- disk: no specific requirement
+
+#setup
+https://kafka.apache.org/quickstart

@@ -7,7 +7,6 @@ import yaml
 
 from lib.prepare import prepare
 from lib.provision import provision_bootstrap, provision_master, provision_agent
-from lib.deploy import deploy_investigator
 
 
 def cli_menu_parser():

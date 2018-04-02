@@ -8,7 +8,7 @@ def provision_bootstrap(configs):
     mdata = MetaData()
     bootstrap_session = Shell()
 
-    command = "cd {0} && /bin/bash ./dcos_generate_config.sh".format(mconfig.BOOTSTRAP_ROOT)
+    command = "cd {0} && /bin/bash ./dcos_generate_config.sh".format(mdata.BOOTSTRAP_ROOT)
     bootstrap_session.local(command)
 
     command = "docker run -d -p {0}:80 -v {1}/genconf/serve:/usr/share/nginx/html:ro nginx".format(

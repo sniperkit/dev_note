@@ -1,0 +1,11 @@
+cassandra_version: 3.9
+archive: https://archive.apache.org/dist/cassandra/<CASSANDRA_VERSION>/apache-cassandra-<CASSANDRA_VERSION>-bin.tar.gz
+info: setup standalone cassandra
+node: single
+minimal_requirement:
++-- cpu: no specific requirement
++-- mem: no specific requirement
++-- disk: no specific requirement
+
+#setup
+https://github.com/apache/cassandra

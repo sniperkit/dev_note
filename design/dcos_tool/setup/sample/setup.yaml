@@ -14,10 +14,4 @@ agent_nodes:
     - 172.27.11.164
   username: root
   password: 'pass'
-applications:
-  investigator:
-    frontend_ui:
-      cpu: 0.5
-      memory: 512
-      storage: 1024
 ...

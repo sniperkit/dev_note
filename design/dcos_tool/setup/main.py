@@ -5,15 +5,9 @@ import os
 import argparse
 import yaml
 
-from lib.template import UseTemplate
-from lib.connect import Shell, SshSession
-from lib.provision import provision_bootstrap, provision_master, provision_agent
 from lib.prepare import prepare
-
-# BOOTSTRAP_ROOT = os.path.abspath('./tmp/dcos_bootstrap')
-# IP_DETECT = "genconf/ip-detect"
-# CONFIG_YAML = 'genconf/config.yaml'
-# BOOTSTRAP_SCRIPT = '/opt/dcos_bootstrap/dcos_generate_config.sh'
+from lib.provision import provision_bootstrap, provision_master, provision_agent
+from lib.deploy import deploy_investigator
 
 
 def cli_menu_parser():
@@ -31,7 +25,7 @@ def cli_menu_parser():
 
     parser.add_argument('-A', '--application',
                         choices=['investigator'],
-                        help='applications <investigator>',
+                        help='applications <investigator, ...>',
                         required=('-a' or '--action') and 'deploy' in os.sys.argv)
 
     parser.add_argument('-c', '--config',
@@ -51,6 +45,7 @@ if __name__ == "__main__":
 
     if args.action == 'prepare':
         prepare(configs=configs)
+
     if args.action == 'provision' and args.node == 'bootstrap':
         provision_bootstrap(configs=configs)
     if args.action == 'provision' and args.node == 'master':
@@ -58,7 +53,5 @@ if __name__ == "__main__":
     if args.action == 'provision' and args.node == 'agent':
         provision_agent(configs=configs)
 
-
-
-
-
+    # if args.action == 'deploy' and args.application == 'investigator':
+    #     deploy_investigator(configs=configs.get("applications").get("investigator"))

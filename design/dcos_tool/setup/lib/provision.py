@@ -1,16 +1,11 @@
 #!/usr/bin/python3 -u
 # -*- coding: utf-8 -*-
-import os
-import argparse
-import yaml
-
-from .template import UseTemplate
 from .connect import Shell, SshSession
-from .meta import MetaConfig
+from .meta import MetaData
 
 
 def provision_bootstrap(configs):
-    mconfig = MetaConfig()
+    mdata = MetaData()
     bootstrap_session = Shell()
 
     command = "cd {0} && /bin/bash ./dcos_generate_config.sh".format(mconfig.BOOTSTRAP_ROOT)
@@ -18,13 +13,13 @@ def provision_bootstrap(configs):
 
     command = "docker run -d -p {0}:80 -v {1}/genconf/serve:/usr/share/nginx/html:ro nginx".format(
         configs.get('bootstrap_node').get('port'),
-        mconfig.BOOTSTRAP_ROOT
+        mdata.BOOTSTRAP_ROOT
     )
     bootstrap_session.local(command)
 
 
 def provision_master(configs):
-    mconfig = MetaConfig()
+    mdata = MetaData()
 
     for host in configs.get('master_nodes').get('addr'):
         try:
@@ -43,7 +38,7 @@ def provision_master(configs):
             if configs.get('bootstrap_node').get('addr') == host:
                 sed_find = "^systemctl restart docker"
                 sed_replace = "docker run -d -p {0}:80 -v {1}/genconf/serve:/usr/share/nginx/html:ro nginx".format(
-                    configs.get('bootstrap_node').get('port'), mconfig.BOOTSTRAP_ROOT)
+                    configs.get('bootstrap_node').get('port'), mdata.BOOTSTRAP_ROOT)
                 command = "sed -E -i 's#{0}#& \\n{1}#' /tmp/dcos_install.sh".format(sed_find, sed_replace)
                 master_session.local(command)
 

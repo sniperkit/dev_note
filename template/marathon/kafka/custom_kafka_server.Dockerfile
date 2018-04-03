@@ -19,7 +19,7 @@ WORKDIR ${KAFKA_ROOT}
 # CMD bin/zookeeper-server-start.sh config/zookeeper.properties &
 
 # KAFKA
-# CMD bin/kafka-server-start.sh config/server.properties
+CMD bin/kafka-server-start.sh config/server.properties
 
 # PORT
 EXPOSE 9092

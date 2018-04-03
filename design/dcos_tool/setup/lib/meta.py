@@ -10,4 +10,6 @@ class MetaData:
     IP_DETECT = "genconf/ip-detect"
     CONFIG_YAML = 'genconf/config.yaml'
 
-    MARATHON_ROOT = abspath('./template/marathon')
+    DCOS_CERT_DIR = '/var/lib/dcos/pki/tls/certs'
+
+    MARATHON_TEMPLATE_DIR = abspath('./template/marathon')

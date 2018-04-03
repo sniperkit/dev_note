@@ -6,7 +6,7 @@ import argparse
 import yaml
 
 from lib.prepare import prepare
-from lib.provision import provision_bootstrap, provision_master, provision_agent
+from lib.provision import provision_bootstrap, provision_master, provision_agent, provision_agent_registry
 
 
 def cli_menu_parser():
@@ -50,7 +50,8 @@ if __name__ == "__main__":
     if args.action == 'provision' and args.node == 'master':
         provision_master(configs=configs)
     if args.action == 'provision' and args.node == 'agent':
-        provision_agent(configs=configs)
+        # provision_agent(configs=configs)
+        provision_agent_registry(configs=configs)
 
     # if args.action == 'deploy' and args.application == 'investigator':
     #     deploy_investigator(configs=configs.get("applications").get("investigator"))

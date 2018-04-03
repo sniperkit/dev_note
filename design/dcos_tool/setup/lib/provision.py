@@ -71,3 +71,25 @@ def provision_agent(configs):
         finally:
             if agent_session.session:
                 agent_session.session.close()
+
+
+def provision_agent_registry(configs):
+    mdata = MetaData()
+
+    for host in configs.get('agent_nodes').get('addr'):
+        try:
+            _session = SshSession(
+                dest_host=host,
+                dest_user=configs.get('agent_nodes').get('username'),
+                dest_password=configs.get('agent_nodes').get('password'))
+
+            agent_session = Shell(session=_session.login_with_password())
+
+            for crt in configs.get('registry').get('certificates'):
+                command = "echo '{crt}' > {dir}/`echo '{crt}' | openssl x509 -hash -noout`.0".format(
+                    crt=crt, dir=mdata.DCOS_CERT_DIR)
+                agent_session.remote(command=command)
+
+        finally:
+            if agent_session.session:
+                agent_session.session.close()

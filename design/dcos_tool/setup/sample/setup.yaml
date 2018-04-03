@@ -14,4 +14,29 @@ agent_nodes:
     - 172.27.11.164
   username: root
   password: 'pass'
+registry:
+  certificates:
+    - |
+      -----BEGIN CERTIFICATE-----
+      MIIDAzCCAeugAwIBAgIJAO8nH4YUuLWwMA0GCSqGSIb3DQEBCwUAMBgxFjAUBgNV
+      BAMMDTE3Mi4yNy4xMS4xNjcwHhcNMTgwMzMwMDkyMTQ1WhcNMTkwMzMwMDkyMTQ1
+      WjAYMRYwFAYDVQQDDA0xNzIuMjcuMTEuMTY3MIIBIjANBgkqhkiG9w0BAQEFAAOC
+      AQ8AMIIBCgKCAQEArIl3GhPhaQCbQRtEA+DrWo7aKYPllm/jIE4fYDIf1EnvNh+B
+      wbB1mFD0uiH+4K+3V4jZOULODDbfFlJfNMuvyL0o0xZBXLvAkXIvrgfYRpZm9miJ
+      Y3bvoexwug6lmqBtg/mFO0cIAZqEsyjdASslOIsgySh/1q5WFHWhhLu4l2IUaqgM
+      brnNfWIVVfbUSZAZwahqW3NftWNs0XSDJ2k/sWGOUqF9LjkBH9fGlTqR/gsl4MMQ
+      cTfo4z3J7E/oZn26gsz2o87/WYR5poBaMGgEc1/vySAYeWbjtIXhlnXU10szBo3N
+      YS1vr3Jd5AJ02MRx04A3LBeZ6L8NuHYDScY3RQIDAQABo1AwTjAdBgNVHQ4EFgQU
+      ISHI27r8UO5JQ64hahVF7+824h0wHwYDVR0jBBgwFoAUISHI27r8UO5JQ64hahVF
+      7+824h0wDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAJEgXoGWqzBab
+      2doaIVGmMjTrOBFcHrokbIMNlXSy4NGm1BfXxd+o+MQFs0036lBbxaHSeUVY8BRd
+      i9LoI4vQjW9xveR3KbN/HlAYPJHf0q1AdlQjfeVtU1S9wanga7YdHNoJ/u3cFUsY
+      sk7UbDdnHn0RhPAfa6REejAtCbe8B8cW5oHuEvPLG2d2npUxnymfNd6mHhauLdvn
+      irQcwXHSwIJOMhodHrgO/66CgXtMkUskM3fIUycQMfaLoLaSBkgwMxttpY6LXt6V
+      NujE9rI+6iTVwLaNf8IGxLznrofqM0CzFWda+ADcXMnpViz6dxfpWjW9me1bo1np
+      NjI4f9g1pw==
+      -----END CERTIFICATE-----
+applications:
+  - name: cassandra
+    version: 2.12-1.0.1
 ...

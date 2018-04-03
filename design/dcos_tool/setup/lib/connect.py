@@ -65,7 +65,6 @@ class Shell():
 
         chn.settimeout(10800)
         chn.exec_command(command)
-        LogNormal(REMOTE_CMD_RETURN={"cmd": command})
 
         while not chn.exit_status_ready():
             time.sleep(self.retry_interval)
@@ -77,5 +76,7 @@ class Shell():
                     LogNormal(STDOUT={"stdout": data_buffer})
                     data_buffer = '\n'.join(split_lines(input_byte=chn.recv(1024)))
 
-        if chn.recv_exit_status() is not 0:
+        if chn.recv_exit_status() is 0:
+            LogNormal(REMOTE_CMD_RETURN={"cmd": command})
+        else:
             LogError(REMOTE_CMD_RETURN={"cmd": command, "return_code": chn.recv_exit_status()})

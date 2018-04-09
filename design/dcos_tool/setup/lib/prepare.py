@@ -6,48 +6,6 @@ from .connect import Shell
 from .meta import MetaData
 
 
-# def prepare(configs, verbosity):
-#     meta = MetaData()
-#
-#     ip_detect = UseTemplate('./template/ip-detect.tpl', verbosity=verbosity)
-#     ip_detect.create_new_file(new_file='{0}/{1}'.format(meta.BOOTSTRAP_ROOT, meta.IP_DETECT),
-#                               data_dict={
-#                                   'ROUTE_DESTINATION': configs.get('bootstrap_node').get('addr')
-#                               })
-#
-#     config_yaml = UseTemplate('./template/config.yaml.tpl', verbosity=verbosity)
-#     config_yaml.create_new_file(new_file='{0}/{1}'.format(meta.BOOTSTRAP_ROOT, meta.CONFIG_YAML),
-#                                 data_dict={
-#                                     'CLUSTER_NAME': configs.get('cluster_name'),
-#                                     'BOOTSTRAP_HOST': configs.get('bootstrap_node').get('addr'),
-#                                     'BOOTSTRAP_PORT': configs.get('bootstrap_node').get('port'),
-#                                     'MASTER_HOSTS': '\n- '.join(configs.get('master_nodes').get('addr'))
-#                                 })
-#
-#     host_session = Shell(verbosity=verbosity)
-#     host_session.local(command="curl -o {0}/dcos_generate_config.sh {1}".format(meta.BOOTSTRAP_ROOT, configs.get('bootstrap_node').get('archive')),
-#                        info="download bootstrap binary")
-#
-#     for application in configs.get("applications"):
-#
-#         _data_dict = {}
-#         for key in application:
-#             _data_dict.update({key.upper(): '{0}'.format(application.get(key))})
-#
-#         _config = "{0}/{1}/{2}/marathon_config.json".format(
-#             meta.MARATHON_TEMPLATE_DIR,
-#             application.get("name"),
-#             application.get("version")
-#         )
-#
-#         _call_tpl = UseTemplate(
-#             template=_config + '.tpl',
-#             verbosity=verbosity
-#         )
-#
-#         _call_tpl.create_new_file(new_file=_config,
-#                                   data_dict=_data_dict)
-
 class PrepareBootstrap:
     def __init__(self, configs, verbosity):
         self.configs = configs

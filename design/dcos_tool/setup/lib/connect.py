@@ -4,8 +4,8 @@ import subprocess
 import time
 import os
 import paramiko
-from .log import LogNormal, LogError
 
+from .log import LogNormal, LogError
 from .utils import split_lines
 
 
@@ -102,7 +102,6 @@ class Shell():
                 REMOTE_CMD_RETURN={"cmd": command}
             )
         else:
-            print("IM IN ERROR")
             LogError(
                 self.verbosity,
                 INFO={"message": info},

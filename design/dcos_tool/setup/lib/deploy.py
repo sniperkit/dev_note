@@ -2,22 +2,11 @@
 # -*- coding: utf-8 -*-
 import os
 
-from .template import UseTemplate
 from .meta import MetaData
 from .connect import Shell
-from .log import LogNormal, LogError
+from .log import LogError
 
 
-# def deploy_marathon_application(configs):
-#     print(configs)
-#     mdata = MetaData()
-#
-#     # tpl = UseTemplate(template=mmarathon.INV_FRONTEND_UI)
-#     # tpl.create_new_file(
-#     #     new_file="{0}/{1}".format(mdata.MARATHON_TMP, splitext(mmarathon.INV_FRONTEND_UI)[0]),
-#     #     data_dict="TODO"
-#     # )
-#
 class Deploy:
     def __init__(self, configs, verbosity):
         self.configs = configs

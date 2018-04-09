@@ -67,6 +67,3 @@ if __name__ == "__main__":
 
     if args.action == 'deploy':
         Deploy(configs=configs, verbosity=args.verbosity).with_marathon()
-
-    # if args.action == 'deploy' and args.application == 'investigator':
-    #     deploy_investigator(configs=configs.get("applications").get("investigator"))

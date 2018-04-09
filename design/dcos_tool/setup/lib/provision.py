@@ -4,31 +4,6 @@ from .connect import Shell, SshSession
 from .meta import MetaData
 
 
-# def provision_bootstrap(configs):
-#     mdata = MetaData()
-#     bootstrap_session = Shell()
-#
-#     commands = dict(
-#         bootstrap_config="cd {0} && /bin/bash ./dcos_generate_config.sh".format(
-#             mdata.BOOTSTRAP_ROOT
-#         ),
-#         start_web_service="docker run -d -p {0}:80 -v {1}/genconf/serve:/usr/share/nginx/html:ro nginx".format(
-#             configs.get('bootstrap_node').get('port'),
-#             mdata.BOOTSTRAP_ROOT
-#         )
-#     )
-#
-#     # command = "cd {0} && /bin/bash ./dcos_generate_config.sh".format(mdata.BOOTSTRAP_ROOT)
-#     # bootstrap_session.local(command)
-#     #
-#     # command = "docker run -d -p {0}:80 -v {1}/genconf/serve:/usr/share/nginx/html:ro nginx".format(
-#     #     configs.get('bootstrap_node').get('port'),
-#     #     mdata.BOOTSTRAP_ROOT
-#     # )
-#     # bootstrap_session.local(command)
-#     bootstrap_session.local(commands.get("bootstrap_config"))
-#     bootstrap_session.local(commands.get("start_web_service"))
-
 class BootstrapNode:
     def __init__(self, configs, verbosity):
         self.configs = configs

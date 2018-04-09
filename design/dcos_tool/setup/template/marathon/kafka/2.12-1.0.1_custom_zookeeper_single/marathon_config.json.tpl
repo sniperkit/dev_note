@@ -1,8 +1,8 @@
 {
   "id": "/kafka/zookeeper",
-  "cpus": 0.5,
-  "mem": 1024,
-  "disk": 1024,
+  "cpus": $CPU,
+  "mem": $MEMORY,
+  "disk": $DISK,
   "networks": [ { "mode": "container/bridge" } ],
   "container": {
     "type": "DOCKER",

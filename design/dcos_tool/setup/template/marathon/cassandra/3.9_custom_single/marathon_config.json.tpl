@@ -1,8 +1,8 @@
 {
   "id": "/cassandra/single",
-  "cpus": 1,
-  "mem": 4096,
-  "disk": 1024,
+  "cpus": $CPU,
+  "mem": $MEMORY,
+  "disk": $DISK,
   "networks": [ { "mode": "container/bridge" } ],
   "container": {
     "type": "MESOS",

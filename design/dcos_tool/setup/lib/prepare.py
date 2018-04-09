@@ -6,23 +6,103 @@ from .connect import Shell
 from .meta import MetaData
 
 
-def prepare(configs):
-    mdata = MetaData()
+# def prepare(configs, verbosity):
+#     meta = MetaData()
+#
+#     ip_detect = UseTemplate('./template/ip-detect.tpl', verbosity=verbosity)
+#     ip_detect.create_new_file(new_file='{0}/{1}'.format(meta.BOOTSTRAP_ROOT, meta.IP_DETECT),
+#                               data_dict={
+#                                   'ROUTE_DESTINATION': configs.get('bootstrap_node').get('addr')
+#                               })
+#
+#     config_yaml = UseTemplate('./template/config.yaml.tpl', verbosity=verbosity)
+#     config_yaml.create_new_file(new_file='{0}/{1}'.format(meta.BOOTSTRAP_ROOT, meta.CONFIG_YAML),
+#                                 data_dict={
+#                                     'CLUSTER_NAME': configs.get('cluster_name'),
+#                                     'BOOTSTRAP_HOST': configs.get('bootstrap_node').get('addr'),
+#                                     'BOOTSTRAP_PORT': configs.get('bootstrap_node').get('port'),
+#                                     'MASTER_HOSTS': '\n- '.join(configs.get('master_nodes').get('addr'))
+#                                 })
+#
+#     host_session = Shell(verbosity=verbosity)
+#     host_session.local(command="curl -o {0}/dcos_generate_config.sh {1}".format(meta.BOOTSTRAP_ROOT, configs.get('bootstrap_node').get('archive')),
+#                        info="download bootstrap binary")
+#
+#     for application in configs.get("applications"):
+#
+#         _data_dict = {}
+#         for key in application:
+#             _data_dict.update({key.upper(): '{0}'.format(application.get(key))})
+#
+#         _config = "{0}/{1}/{2}/marathon_config.json".format(
+#             meta.MARATHON_TEMPLATE_DIR,
+#             application.get("name"),
+#             application.get("version")
+#         )
+#
+#         _call_tpl = UseTemplate(
+#             template=_config + '.tpl',
+#             verbosity=verbosity
+#         )
+#
+#         _call_tpl.create_new_file(new_file=_config,
+#                                   data_dict=_data_dict)
 
-    ip_detect = UseTemplate('./template/ip-detect.tpl')
-    ip_detect.create_new_file(new_file='{0}/{1}'.format(mdata.BOOTSTRAP_ROOT, mdata.IP_DETECT),
-                              data_dict={
-                                  'ROUTE_DESTINATION': configs.get('bootstrap_node').get('addr')
-                              })
+class PrepareBootstrap:
+    def __init__(self, configs, verbosity):
+        self.configs = configs
+        self.verbosity = verbosity
+        self.meta = MetaData()
 
-    config_yaml = UseTemplate('./template/config.yaml.tpl')
-    config_yaml.create_new_file(new_file='{0}/{1}'.format(mdata.BOOTSTRAP_ROOT, mdata.CONFIG_YAML),
-                                data_dict={
-                                    'CLUSTER_NAME': configs.get('cluster_name'),
-                                    'BOOTSTRAP_HOST': configs.get('bootstrap_node').get('addr'),
-                                    'BOOTSTRAP_PORT': configs.get('bootstrap_node').get('port'),
-                                    'MASTER_HOSTS': '\n- '.join(configs.get('master_nodes').get('addr'))
-                                })
+        self.bootstrap()
 
-    host_session = Shell()
-    host_session.local("curl -o {0}/dcos_generate_config.sh {1}".format(mdata.BOOTSTRAP_ROOT, configs.get('bootstrap_node').get('archive')))
+    def bootstrap(self):
+        ip_detect = UseTemplate('./template/ip-detect.tpl', verbosity=self.verbosity)
+        ip_detect.create_new_file(new_file='{0}/{1}'.format(self.meta.BOOTSTRAP_ROOT, self.meta.IP_DETECT),
+                                  data_dict={
+                                      'ROUTE_DESTINATION': self.configs.get('bootstrap_node').get('addr')
+                                  })
+
+        config_yaml = UseTemplate('./template/config.yaml.tpl', verbosity=self.verbosity)
+        config_yaml.create_new_file(new_file='{0}/{1}'.format(self.meta.BOOTSTRAP_ROOT, self.meta.CONFIG_YAML),
+                                    data_dict={
+                                        'CLUSTER_NAME': self.configs.get('cluster_name'),
+                                        'BOOTSTRAP_HOST': self.configs.get('bootstrap_node').get('addr'),
+                                        'BOOTSTRAP_PORT': self.configs.get('bootstrap_node').get('port'),
+                                        'MASTER_HOSTS': '\n- '.join(self.configs.get('master_nodes').get('addr'))
+                                    })
+
+        _cmd = "curl -o {0}/dcos_generate_config.sh {1}".format(
+            self.meta.BOOTSTRAP_ROOT, self.configs.get('bootstrap_node').get('archive'))
+        host_session = Shell(verbosity=self.verbosity)
+        host_session.local(command=_cmd, info="download bootstrap binary")
+
+
+class PrepareApplication:
+    def __init__(self, configs, verbosity):
+        self.configs = configs
+        self.verbosity = verbosity
+        self.meta = MetaData()
+
+        self.application()
+
+    def application(self):
+        for application in self.configs.get("applications"):
+
+            _data_dict = {}
+            for key in application:
+                _data_dict.update({key.upper(): '{0}'.format(application.get(key))})
+
+            _config = "{0}/{1}/{2}/marathon_config.json".format(
+                self.meta.MARATHON_TEMPLATE_DIR,
+                application.get("name"),
+                application.get("version")
+            )
+
+            _call_tpl = UseTemplate(
+                template=_config + '.tpl',
+                verbosity=self.verbosity
+            )
+
+            _call_tpl.create_new_file(new_file=_config,
+                                      data_dict=_data_dict)

@@ -10,6 +10,8 @@ class MetaData:
     IP_DETECT = "genconf/ip-detect"
     CONFIG_YAML = 'genconf/config.yaml'
 
-    DCOS_CERT_DIR = '/var/lib/dcos/pki/tls/certs'
+    DOCKER_CERT_DIR = '/etc/docker/certs.d/'
+    MESOS_CERT_DIR = '/var/lib/dcos/pki/tls/certs'
 
     MARATHON_TEMPLATE_DIR = abspath('./template/marathon')
+    MARATHON_DEPLOY_CONFIG = 'marathon_config.json'

@@ -4,112 +4,172 @@
 
 class Log:
     def __init__(self):
-        self.fg_reset = '\033[0m'
+        self.fg_none = '\033[0m'
         self.fg_bold = '\033[1m'
         self.fg_lightgrey = '\033[37m'
         self.fg_red = '\033[91m'
         self.fg_green = '\033[92m'
 
-    def output(self, log_message, header, show_state='', timestamp=True):
+        self.fg_set = self.fg_none
+        self.fg_clear = self.fg_none
+
+    def output(self, message, header, show_state=None, timestamp=True):
         import datetime
 
         ts = datetime.datetime.now().strftime("%a, %d %B %Y %I:%M:%S") + ' '
         ts = ts if timestamp is True else ''
 
-        msg_out = ''
-        if show_state == 'error': msg_out = " ... " + self.fg_red + 'ERROR' + self.fg_reset
-        if show_state == 'normal': msg_out = " ... " + self.fg_green + 'NORMAL' + self.fg_reset
+        state = ''
+        if show_state == 'error': state = " ... " + self.fg_red + 'ERROR' + self.fg_none
+        if show_state == 'pass': state = " ... " + self.fg_green + 'PASS' + self.fg_none
+        if show_state == 'error' or state == '[ERROR]': self.fg_set = self.fg_bold
 
-        if show_state == 'error' or show_state == 'err_nostate' or header == '[ERROR]':
-            print(self.fg_bold + ts + header + ' ' + log_message + msg_out + self.fg_reset)
-        else:
-            print(ts + header + ' ' + log_message + msg_out)
+        print(self.fg_set + ts + header + ' ' + message + state + self.fg_clear)
 
 
 class LogError:
-    def __init__(self, **kwargs):
-        self.log = Log()
+    def __init__(self, verbosity, **kwargs):
+        self.logs = []
+        self.verbosity = verbosity
 
+        self.info = kwargs.get('INFO', None)
         self.stderr = kwargs.get('STDERR', None)
-
         self.ssh_connect = kwargs.get('SSH_CONNECT', None)
-
         self.local_cmd_return = kwargs.get('LOCAL_CMD_RETURN', None)
         self.remote_cmd_return = kwargs.get('REMOTE_CMD_RETURN', None)
 
-        self.msg = None
+        self.message = ''
         self.header = "[ERROR]"
-        self.show_state = "error"
+        self.state = "error"
 
-        self._shell()
-        self._stderr()
+        if int(verbosity) >= 1:
+            if self._info(): self.logs.append(self._info())
 
-        self.log.output(log_message=self.msg, header=self.header, show_state=self.show_state)
+        if int(verbosity) >= 2:
+            if self._stderr(): self.logs.append(self._stderr())
+            if self._shell(): self.logs.append(self._shell())
+
+        for log in self.logs:
+            Log().output(
+                message=log.get("message"),
+                header=log.get("header"),
+                show_state=log.get("state")
+            )
+
+    def _info(self):
+        if self.info is not None:
+            return dict(
+                header="[INFO]",
+                message=self.info.get("message"),
+                state=self.state
+            )
 
     def _stderr(self):
         if self.stderr is not None:
-            self.msg = self.stderr.get("stderr")
-            self.header = "[ERROR]"
-            self.show_state = 'err_nostate'
+            return dict(
+                header="[ERROR]",
+                message=self.stderr.get("stderr"),
+                state=None
+            )
 
     def _session(self):
         if self.ssh_connect is not None:
-            self.header = "[SESSION][ssh][connect]"
+            return dict(
+                header="[SESSION][ssh][connect]",
+                state = None
+            )
 
     def _shell(self):
         if self.local_cmd_return is not None:
-            self.msg = self.local_cmd_return.get("cmd")
-            self.header = "[SHELL][local]<return_code: {}>".format(self.local_cmd_return.get("return_code"))
+            return dict(
+                header="[SHELL][local]<return_code: {}>".format(self.local_cmd_return.get("return_code")),
+                message=self.local_cmd_return.get("cmd"),
+                state=None
+            )
 
         if self.remote_cmd_return is not None:
-            self.msg = self.remote_cmd_return.get("cmd")
-            self.header = "[SHELL][remote]<return_code: {}>".format(self.remote_cmd_return.get("return_code"))
+            return dict(
+                header="[SHELL][remote]<return_code: {}>".format(self.remote_cmd_return.get("return_code")),
+                message=self.remote_cmd_return.get("cmd"),
+                state=None
+            )
 
 
 class LogNormal:
-    def __init__(self, **kwargs):
-        self.log = Log()
+    def __init__(self, verbosity, **kwargs):
+        self.logs = []
+        self.do_log = False
 
+        self.info = kwargs.get('INFO', None)
         self.stdout = kwargs.get('STDOUT', None)
-
         self.ssh_connect = kwargs.get('SSH_CONNECT', None)
-
         self.template_create_new = kwargs.get('CREATE_TEMPLATE', None)
-
         self.local_cmd_return = kwargs.get('LOCAL_CMD_RETURN', None)
         self.remote_cmd_return = kwargs.get('REMOTE_CMD_RETURN', None)
 
-        self.msg = ''
-        self.header = "[NORMAL]"
-        self.show_state = "normal"
+        self.message = ''
+        self.header = "[-]"
+        self.state = "pass"
 
-        self._stdout()
-        self._session()
-        self._shell()
-        self._template()
+        if int(verbosity) >= 1:
+            if self._info(): self.logs.append(self._info())
 
-        self.log.output(log_message=self.msg, header=self.header, show_state=self.show_state)
+        if int(verbosity) >= 2:
+            if self._stdout(): self.logs.append(self._stdout())
+            if self._session(): self.logs.append(self._session())
+            if self._shell(): self.logs.append(self._shell())
+            if self._template(): self.logs.append(self._template())
+
+        for log in self.logs:
+            Log().output(
+                message=log.get("message"),
+                header=log.get("header"),
+                show_state=log.get("state")
+            )
+
+    def _info(self):
+        if self.info is not None:
+            return dict(
+                header="[INFO]",
+                message=self.info.get("message"),
+                state=self.state
+            )
 
     def _stdout(self):
         if self.stdout is not None:
-            self.msg = self.stdout.get("stdout")
-            self.header = "[STDOUT]"
-            self.show_state = ''
+            return dict(
+                header="[STDOUT]",
+                message=self.stdout.get("stdout"),
+                state=None
+            )
 
     def _session(self):
         if self.ssh_connect is not None:
-            self.header = "[SESSION][ssh][connect]"
+            return dict(
+                header="[SESSION][ssh]",
+                message="connect",
+                state=None
+            )
 
     def _shell(self):
         if self.local_cmd_return is not None:
-            self.msg = self.local_cmd_return.get("cmd")
-            self.header = "[SHELL][local]"
+            return dict(
+                header="[SHELL][local]",
+                message=self.local_cmd_return.get("cmd"),
+                state=None
+            )
 
         if self.remote_cmd_return is not None:
-            self.msg = self.remote_cmd_return.get("cmd")
-            self.header = "[SHELL][remote]"
+            return dict(
+                header="[SHELL][remote]",
+                message=self.remote_cmd_return.get("cmd"),
+                state=None
+            )
 
     def _template(self):
         if self.template_create_new is not None:
-            self.msg = self.template_create_new.get("new_file")
-            self.header = "[TEMPLATE][create]"
+            return dict(
+                header="[TEMPLATE][create]",
+                message=self.template_create_new.get("new_file"),
+                state=None
+            )

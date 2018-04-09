@@ -11,5 +11,6 @@ resolvers:
 - 8.8.4.4
 process_timeout: 10000
 oauth_enabled: 'false'
+mesos_master_work_dir: /opt/tmp_mesos
 mesos_agent_work_dir: /opt/tmp_mesos
 ...

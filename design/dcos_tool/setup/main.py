@@ -6,7 +6,8 @@ import argparse
 import yaml
 
 from lib.prepare import PrepareBootstrap, PrepareApplication
-from lib._provision import BootstrapNode, MasterNode, AgentNode
+# from lib._provision import BootstrapNode, MasterNode, AgentNode
+from lib.terraform import Bootstrap
 from lib.deploy import Deploy
 
 
@@ -54,12 +55,13 @@ if __name__ == "__main__":
         PrepareApplication(configs=configs, verbosity=args.verbosity)
 
     if args.action == 'provision' and args.node == 'bootstrap':
-        BootstrapNode(configs=configs, verbosity=args.verbosity)
-    if args.action == 'provision' and args.node == 'master':
-        MasterNode(configs=configs, verbosity=args.verbosity)
-    if args.action == 'provision' and args.node == 'agent':
-        AgentNode(configs=configs, verbosity=args.verbosity).bootstrap()
-        AgentNode(configs=configs, verbosity=args.verbosity).trust_registry()
+        Bootstrap(configs=configs, verb=args.verbosity).provision()
+    #     BootstrapNode(configs=configs, verbosity=args.verbosity)
+    # if args.action == 'provision' and args.node == 'master':
+    #     MasterNode(configs=configs, verbosity=args.verbosity)
+    # if args.action == 'provision' and args.node == 'agent':
+    #     AgentNode(configs=configs, verbosity=args.verbosity).bootstrap()
+    #     AgentNode(configs=configs, verbosity=args.verbosity).trust_registry()
 
     if args.action == 'deploy':
         Deploy(configs=configs, verbosity=args.verbosity).with_marathon()

@@ -4,6 +4,9 @@ from os.path import abspath
 
 
 class MetaData:
+    TERRAFORM_TMP = abspath('./tmp/terraform')
+    TERRAFORM_RUN = '/usr/bin'
+
     BOOTSTRAP_ROOT = abspath('./tmp/dcos_bootstrap')
     BOOTSTRAP_SCRIPT = '/opt/dcos_bootstrap/dcos_generate_config.sh'
 

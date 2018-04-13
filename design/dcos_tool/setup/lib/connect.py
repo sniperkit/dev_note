@@ -75,6 +75,8 @@ class Shell():
                 INFO={"message": info},
                 LOCAL_CMD_RETURN={"cmd": command})
 
+        return return_code
+
     def remote(self, command, info):
         chn = self.session.get_transport().open_session()
 

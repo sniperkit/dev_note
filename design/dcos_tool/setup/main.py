@@ -6,7 +6,7 @@ import argparse
 import yaml
 
 from lib.prepare import PrepareBootstrap, PrepareApplication
-from lib.provision import BootstrapNode, MasterNode, AgentNode
+from lib._provision import BootstrapNode, MasterNode, AgentNode
 from lib.deploy import Deploy
 
 
@@ -41,10 +41,6 @@ def cli_menu_parser():
 
 
 if __name__ == "__main__":
-
-    # require:
-    # curl https://bootstrap.pypa.io/get-pip.py | python36
-    # paramiko, pyyaml, ntpd, groupadd nogroup, mount -o remount,exec /tmp
 
     args = cli_menu_parser()
     print(args)

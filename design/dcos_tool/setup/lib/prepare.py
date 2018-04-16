@@ -75,7 +75,9 @@ class PrepareBootstrap:
                 'BOOTSTRAP_HOST': self.configs.get('bootstrap_node').get('address'),
                 'BOOTSTRAP_WEB_PORT': self.configs.get('bootstrap_node').get('ports').get('web'),
                 'MESOS_AGENT_LIST': "\", \"".join(addr for addr in self.configs.get('agent_nodes').get('address')),
-                'MESOS_AGENT_COUNT': len(self.configs.get('agent_nodes').get('address'))
+                'MESOS_AGENT_COUNT': len(self.configs.get('agent_nodes').get('address')),
+                'MESOS_MASTER_USERNAME': self.configs.get('master_nodes').get('username'),
+                'MESOS_MASTER_PASSWORD': self.configs.get('master_nodes').get('password')
             }
         )
 

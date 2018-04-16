@@ -18,8 +18,8 @@ resource "null_resource" "master" {
     type      = "ssh"
     host      = "var.mesos_master_list[count.index]"
     port      = "22"
-    user      = "${var.master_username}"
-    password  = "${var.master_password}"
+    user      = "${var.mesos_master_username}"
+    password  = "${var.mesos_master_password}"
   }
 
   provisioner "remote-exec" {

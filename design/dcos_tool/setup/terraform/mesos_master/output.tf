@@ -22,10 +22,10 @@ output "num_of_mesos_master" {
   value = "${var.num_of_mesos_master}"
 }
 
-output "master_username" {
-  value = "${var.master_username}"
+output "mesos_master_username" {
+  value = "${var.mesos_master_username}"
 }
 
-output "master_password" {
-  value = "${var.master_password}"
+output "mesos_master_password" {
+  value = "${var.mesos_master_password}"
 }

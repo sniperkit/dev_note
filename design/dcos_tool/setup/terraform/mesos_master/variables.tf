@@ -28,12 +28,12 @@ variable "num_of_mesos_master" {
   default = ""
 }
 
-variable "master_username" {
+variable "mesos_master_username" {
   type    = "string"
   default = ""
 }
 
-variable "master_password" {
+variable "mesos_master_password" {
   type    = "string"
   default = ""
 }

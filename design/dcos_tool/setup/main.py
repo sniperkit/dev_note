@@ -63,8 +63,13 @@ if __name__ == "__main__":
             configs=configs,
             verb=args.verbosity
         ).provision()
-    # if args.action == 'provision' and args.node == 'master':
-    #     (configs=configs, verbosity=args.verbosity)
+    if args.action == 'provision' and args.node == 'master':
+        Bootstrap(
+            tf_module=META.TERRAFORM_MODULES.get("mesos_master"),
+            tf_vars=META.TERRAFORM_VARS.get("mesos_master"),
+            configs=configs,
+            verb=args.verbosity
+        ).provision()
     # if args.action == 'provision' and args.node == 'agent':
     #     AgentNode(configs=configs, verbosity=args.verbosity).bootstrap()
     #     AgentNode(configs=configs, verbosity=args.verbosity).trust_registry()

@@ -8,22 +8,22 @@ module "dcos-mesos-master" {
 }
 
 resource "null_resource" "master" {
-  count = "${var.num_of_mesos_master}"
+  count = "${var.num_of_mesos_agent}"
 
   triggers  {
-    dcos_master_list = "\n - ${join("\n - ", var.mesos_master_list)}"
+    dcos_agent_list = "\n - ${join("\n - ", var.mesos_agent_list)}"
   }
 
   connection {
     type      = "ssh"
-    host      = "${element(var.mesos_master_list, count.index)}"
+    host      = "${element(var.mesos_agent_list, count.index)}"
     port      = "22"
-    user      = "${var.mesos_master_username}"
-    password  = "${var.mesos_master_password}"
+    user      = "${var.mesos_agent_username}"
+    password  = "${var.mesos_agent_password}"
   }
 
   provisioner "file" {
-    content     = "${module.dcos-mesos-master.script}"
+    content     = "${module.dcos-mesos-agent.script}"
     destination = "run.sh"
   }
 
@@ -37,12 +37,6 @@ resource "null_resource" "master" {
     inline = [
       "sudo chmod +x run.sh",
       "sudo ./run.sh",
-    ]
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "until $(curl --output /dev/null --silent --head --fail http://${element(var.mesos_master_list, count.index)}/); do printf 'loading DC/OS...'; sleep 10; done"
     ]
   }
 }

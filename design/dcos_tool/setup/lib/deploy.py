@@ -32,7 +32,7 @@ class Deploy:
         for _config in _configs:
             if os.path.isfile(_config):
                 _cmd = "curl -X POST http://leader.mesos:8080/v2/apps -d @{0} -H 'Content-type: application/json'".format(_config)
-                _session = Shell(verbosity=self.verbosity)
+                _session = Shell(verb=self.verbosity)
                 _session.local(_cmd, info="deploy marathon application")
             else:
                 LogError(verbosity=self.verbosity, INFO={"message": "{0} exist".format(_config)})

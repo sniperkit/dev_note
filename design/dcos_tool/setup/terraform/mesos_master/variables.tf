@@ -23,7 +23,7 @@ variable "mesos_master_list" {
   default = []
 }
 
-variable "num_of_mesos_masters" {
+variable "num_of_mesos_master" {
   type    = "string"
   default = ""
 }

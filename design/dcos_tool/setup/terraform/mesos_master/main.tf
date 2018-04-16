@@ -8,15 +8,15 @@ module "dcos-mesos-master" {
 }
 
 resource "null_resource" "master" {
-  master_count = "${var.num_of_mesos_masters}"
+  count = "${var.num_of_mesos_master}"
 
   triggers  {
-    current_master_host = "${element(var.mesos_master_list, master_count.index)}"
+    current_master_host = "var.mesos_master_list[count.index]"
   }
 
   connection {
     type      = "ssh"
-    host      = "${element(var.mesos_master_list, master_count.index)"
+    host      = "var.mesos_master_list[count.index]"
     port      = "22"
     user      = "${var.master_username}"
     password  = "${var.master_password}"

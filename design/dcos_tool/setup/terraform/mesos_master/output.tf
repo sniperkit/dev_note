@@ -18,8 +18,8 @@ output "mesos_master_list" {
   value = "${var.mesos_master_list}"
 }
 
-output "num_of_mesos_masters" {
-  value = "${var.num_of_mesos_masters}"
+output "num_of_mesos_master" {
+  value = "${var.num_of_mesos_master}"
 }
 
 output "master_username" {

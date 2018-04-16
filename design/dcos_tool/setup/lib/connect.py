@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import subprocess
 import time
-import os
 import paramiko
 
 from .utils import remove_ansi_escape
@@ -63,7 +62,6 @@ class Shell():
             line = remove_ansi_escape(line.decode("utf-8"), clear=True)
             if line != '':
                 print(repr(line))
-                # os.write(1, line + b'\n')
                 loops = 0
 
         popen.stdout.close()

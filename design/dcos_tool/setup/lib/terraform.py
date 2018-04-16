@@ -46,13 +46,15 @@ def _apply(module, var_file, verb):
 
 
 class Bootstrap:
-    def __init__(self, configs, verb):
+    def __init__(self, tf_module, tf_vars, configs, verb):
+        self.tf_module = tf_module
+        self.tf_vars = tf_vars
         self.configs = configs
         self.verb = verb
 
     def provision(self):
         _install(self.configs.get("terraform").get("version"), self.verb)
-        _init(module=META.TERRAFORM_MODULES.get('dcos_bootstrap'), verb=self.verb)
-        _apply(module=META.TERRAFORM_MODULES.get('dcos_bootstrap'),
-               var_file="{0}/{1}".format(META.TERRAFORM_TEMPORARY_DIR, META.TERRAFORM_VARS.get("dcos_bootstrap")),
+        _init(module=self.tf_module, verb=self.verb)
+        _apply(module=self.tf_module,
+               var_file="{0}/{1}".format(META.TERRAFORM_TEMPORARY_DIR, self.tf_vars),
                verb=self.verb)

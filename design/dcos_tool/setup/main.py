@@ -5,10 +5,12 @@ import os
 import argparse
 import yaml
 
+from lib.meta import MetaData
 from lib.prepare import PrepareBootstrap, PrepareApplication
-# from lib._provision import BootstrapNode, MasterNode, AgentNode
 from lib.terraform import Bootstrap
 from lib.deploy import Deploy
+
+META = MetaData()
 
 
 def cli_menu_parser():
@@ -55,10 +57,14 @@ if __name__ == "__main__":
         PrepareApplication(configs=configs, verb=args.verbosity)
 
     if args.action == 'provision' and args.node == 'bootstrap':
-        Bootstrap(configs=configs, verb=args.verbosity).provision()
-    #     BootstrapNode(configs=configs, verbosity=args.verbosity)
+        Bootstrap(
+            tf_module=META.TERRAFORM_MODULES.get("dcos_bootstrap"),
+            tf_vars=META.TERRAFORM_VARS.get("dcos_bootstrap"),
+            configs=configs,
+            verb=args.verbosity
+        ).provision()
     # if args.action == 'provision' and args.node == 'master':
-    #     MasterNode(configs=configs, verbosity=args.verbosity)
+    #     (configs=configs, verbosity=args.verbosity)
     # if args.action == 'provision' and args.node == 'agent':
     #     AgentNode(configs=configs, verbosity=args.verbosity).bootstrap()
     #     AgentNode(configs=configs, verbosity=args.verbosity).trust_registry()

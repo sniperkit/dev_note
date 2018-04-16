@@ -8,16 +8,6 @@ variable "dcos_version" {
   default = "1.11.0"
 }
 
-variable "custom_dcos_download_path" {
-  type    = "string"
-  default = ""
-}
-
-variable "dcos_cluster_name" {
-  type    = "string"
-  default = ""
-}
-
 variable "bootstrap_host" {
   type    = "string"
   default = ""
@@ -33,37 +23,17 @@ variable "mesos_master_list" {
   default = []
 }
 
-variable "dcos_master_discovery" {
-  type    = "string"
-  default = "static"
-}
-
-variable "dcos_exhibitor_storage_backend" {
-  type    = "string"
-  default = "static"
-}
-
-variable "dcos_resolvers" {
-  type    = "list"
-  default = [ "8.8.8.8", "8.8.4.4" ]
-}
-
-variable "local_dcos_ip_detect_script" {
+variable "num_of_mesos_masters" {
   type    = "string"
   default = ""
 }
 
-variable "dcos_ip_detect_public_filename" {
+variable "master_username" {
   type    = "string"
-  default = "genconf/ip-detect"
+  default = ""
 }
 
-variable "dcos_process_timeout" {
+variable "master_password" {
   type    = "string"
-  default = "10000"
-}
-
-variable "dcos_oauth_enabled" {
-  type    = "string"
-  default = "false"
+  default = ""
 }

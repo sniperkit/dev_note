@@ -8,35 +8,23 @@ module "dcos-mesos-master" {
 }
 
 resource "null_resource" "master" {
-  count = "${var.master_list}"
+  master_count = "${var.num_of_mesos_masters}"
+
+  triggers  {
+    current_master_host = "${element(var.mesos_master_list, master_count.index)}"
+  }
 
   connection {
     type      = "ssh"
-    host      = "${var.bootstrap_host}"
-    port      = "${var.bootstrap_ssh_port}"
-    user      = "${var.bootstrap_username}"
-    password  = "${var.bootstrap_password}"
-  }
-
-  triggers  {
-    bootstrap_private_ip = "${var.bootstrap_host}"
-  }
-
-  provisioner "file" {
-    source      = "${var.local_dcos_ip_detect_script}"
-    destination = "/tmp/ip-detect"
-  }
-
-  provisioner "file" {
-    content     = "${module.dcos-bootstrap.script}"
-    destination = "/tmp/run.sh"
+    host      = "${element(var.mesos_master_list, master_count.index)"
+    port      = "22"
+    user      = "${var.master_username}"
+    password  = "${var.master_password}"
   }
 
   provisioner "remote-exec" {
     inline = [
-      "sed -i '/^$/d' ${local.run}",
-      "sudo chmod +x ${local.run}",
-      "sudo ${local.run}",
+      "touch /tmp/123.txt",
     ]
   }
 }

@@ -112,7 +112,7 @@ class PrepareApplication:
             _call_tpl.create_new_file(new_file=_config, data_dict=_data_dict)
 
     def trust_registry(self):
-        for host in self.configs.get('agent_nodes').get('addr'):
+        for host in self.configs.get('agent_nodes').get('address'):
             try:
                 _session = SshSession(
                     dest_host=host,

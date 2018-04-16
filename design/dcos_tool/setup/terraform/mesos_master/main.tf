@@ -11,15 +11,39 @@ resource "null_resource" "master" {
   count = "${var.num_of_mesos_master}"
 
   triggers  {
-    current_master_host = "var.mesos_master_list[count.index]"
+    dcos_master_list = "\n - ${join("\n - ", var.mesos_master_list)}"
   }
 
   connection {
     type      = "ssh"
-    host      = "var.mesos_master_list[count.index]"
+    host      = "${element(var.mesos_master_list, count.index)}"
     port      = "22"
     user      = "${var.mesos_master_username}"
     password  = "${var.mesos_master_password}"
+  }
+
+  provisioner "file" {
+    content     = "${module.dcos-mesos-master.script}"
+    destination = "run.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+     "until $(curl --output /dev/null --silent --head --fail http://${var.bootstrap_host}:${var.bootstrap_web_port}/dcos_install.sh); do printf 'waiting for bootstrap node to serve...'; sleep 20; done"
+    ]
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo chmod +x run.sh",
+      "sudo ./run.sh",
+    ]
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "until $(curl --output /dev/null --silent --head --fail http://${element(var.mesos_master_list, count.index)}/); do printf 'loading DC/OS...'; sleep 10; done"
+    ]
   }
 
   provisioner "remote-exec" {

@@ -23,7 +23,7 @@ class PrepareBootstrap:
         ip_detect.create_new_file(
             new_file='{0}/{1}'.format(self.meta.DCOS_TEMPORARY_DIR, self.meta.IP_DETECT),
             data_dict={
-                'ROUTE_DESTINATION': self.configs.get('bootstrap_node').get('addr')
+                'ROUTE_DESTINATION': self.configs.get('bootstrap_node').get('address')
             }
         )
 
@@ -59,7 +59,9 @@ class PrepareBootstrap:
                 'BOOTSTRAP_HOST': self.configs.get('bootstrap_node').get('address'),
                 'BOOTSTRAP_WEB_PORT': self.configs.get('bootstrap_node').get('ports').get('web'),
                 'MESOS_MASTER_LIST': "\", \"".join(addr for addr in self.configs.get('master_nodes').get('address')),
-                'MESOS_MASTER_COUNT': len(self.configs.get('master_nodes').get('address'))
+                'MESOS_MASTER_COUNT': len(self.configs.get('master_nodes').get('address')),
+                'MESOS_MASTER_USERNAME': self.configs.get('master_nodes').get('username'),
+                'MESOS_MASTER_PASSWORD': self.configs.get('master_nodes').get('password')
             }
         )
 
@@ -76,8 +78,8 @@ class PrepareBootstrap:
                 'BOOTSTRAP_WEB_PORT': self.configs.get('bootstrap_node').get('ports').get('web'),
                 'MESOS_AGENT_LIST': "\", \"".join(addr for addr in self.configs.get('agent_nodes').get('address')),
                 'MESOS_AGENT_COUNT': len(self.configs.get('agent_nodes').get('address')),
-                'MESOS_MASTER_USERNAME': self.configs.get('master_nodes').get('username'),
-                'MESOS_MASTER_PASSWORD': self.configs.get('master_nodes').get('password')
+                'MESOS_AGENT_USERNAME': self.configs.get('agent_nodes').get('username'),
+                'MESOS_AGENT_PASSWORD': self.configs.get('agent_nodes').get('password')
             }
         )
 

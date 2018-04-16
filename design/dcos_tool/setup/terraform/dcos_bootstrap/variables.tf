@@ -48,11 +48,6 @@ variable "mesos_master_list" {
   default = []
 }
 
-variable "num_of_mesos_agent" {
-  type    = "string"
-  default = ""
-}
-
 variable "mesos_master_discovery" {
   type    = "string"
   default = "static"

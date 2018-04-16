@@ -30,7 +30,8 @@ resource "null_resource" "bootstrap" {
   }
 
   triggers  {
-    bootstrap_private_ip = "${var.bootstrap_host}"
+    bootstrap_private_ip   = "${var.bootstrap_host}"
+    dcos_master_discovery  = "${var.mesos_master_discovery}"
   }
 
   provisioner "file" {

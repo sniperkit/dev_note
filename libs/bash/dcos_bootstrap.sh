@@ -12,10 +12,10 @@
 #UNIVERSAL_SRV_DOWNLOAD='https://github.com/mesosphere/universe.git --branch version-3.x'
 #UNIVERSAL_SRV_SRC="${SRC_HOME}/universal_server"
 #
-#UNIVERSE_HTTP='dcos-local-universe-http'
+#UNIVERSE_HTTP='dcos_bootstrap-local-universe-http'
 #UNIVERSE_HTTP_DOWNLOAD="https://raw.githubusercontent.com/mesosphere/universe/version-3.x/docker/local-universe/${UNIVERSE_HTTP}.service"
 #
-#UNIVERSE_REGISTRY='dcos-local-universe-registry'
+#UNIVERSE_REGISTRY='dcos_bootstrap-local-universe-registry'
 #UNIVERSE_REGISTRY_DOWNLOAD="curl -v https://raw.githubusercontent.com/mesosphere/universe/version-3.x/docker/local-universe/${UNIVERSE_REGISTRY}.service"
 #
 #UNIVERSE_NODE='192.168.201.108'
@@ -60,7 +60,7 @@ function create_dcos_config {
 
   declare -a _master_list=("${!4}")
 
-  local _cluster_name="dcos-test"
+  local _cluster_name="dcos_bootstrap-test"
   local _ssh_user="admin"
 
   local _config="$1/config.yaml"
@@ -91,7 +91,7 @@ EOF`
 }
 
 function uninstall_dcos {
-  for i in `find /* -name *dcos*`; do echo $i | grep -P '\bdcos' | xargs rm -rf ; done
+  for i in `find /* -name *dcos*`; do echo $i | grep -P '\bdcos_bootstrap' | xargs rm -rf ; done
   for i in `find /* -name *_dcos*`; do echo $i | xargs rm -rf ; done
   for i in `find /* -name *mesos*`; do echo $i | grep -P '\bmesos' | xargs rm -rf ; done
   for i in `find /* -name *_mesos*`; do echo $i | xargs rm -rf ; done

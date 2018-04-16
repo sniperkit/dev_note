@@ -18,3 +18,7 @@ function get_or_update_git_repo() {
     ( log "${repo_url} ... ${FONT_RED}failed${FONT_NORMAL}" "[GIT][clone]"; return 1 )
   fi
 }
+
+function git_revert_local_dir() {
+  git checkout -- .
+}

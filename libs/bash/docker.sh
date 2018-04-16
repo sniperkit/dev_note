@@ -2,10 +2,16 @@
 . ./git.sh
 . ./file_and_dir.sh
 . ./default_paths.sh
+. ./openssl.sh
 
 # https://www.centos.bz/2017/01/dockerd-launch-the-docker-daemon/
 # http://www.dockerinfo.net/2889.html
 # http://www.zoues.com/2017/06/23/译见-奇妙的-docker-使用技巧十连发【zoues-com】/
+# https://stackoverflow.com/questions/31205438/docker-on-windows-boot2docker-certificate-signed-by-unknown-authority-error
+# https://stackoverflow.com/questions/26924766/docker-client-cant-read-from-both-docker-private-registry-and-online-docker
+# https://gist.github.com/christianberg/eaec4028fbb77a0c3c8c
+
+DOCKER_IO_REGISTRY_CRT='https://auth.docker.io/token?scope=repository%3Alibrary%2Fhello-world%3Apull&service=registry.docker.io'
 
 function create_docker_repo_file {
   local _repo_config='/etc/yum.repos.d/docker.repo'
@@ -202,4 +208,10 @@ function get_docker_registry {
 
 function del_docker_registry_image {
   curl -X DELETE localhost:5000/v1/repositories/ubuntu/tags/latest
+}
+
+function set_private_registry_with_tls {
+  cd /etc/docker/registry
+  set_openssl_crt_with_ip_san
+  docker run -d --name registry_private -v /etc/docker/registry/certs:/certs -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key -p 5000:5000 registry:2
 }

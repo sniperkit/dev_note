@@ -34,7 +34,7 @@ output "bootstrap_password" {
   value = "${var.bootstrap_password}"                                                                                                                                    
 }
 
-output "dcos_master_list" {
+output "mesos_master_list" {
   value = "${var.dcos_master_list}"
 }
 

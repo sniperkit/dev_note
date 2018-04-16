@@ -53,7 +53,7 @@ variable "num_of_mesos_agent" {
   default = ""
 }
 
-variable "dcos_master_discovery" {
+variable "mesos_master_discovery" {
   type    = "string"
   default = "static"
 }

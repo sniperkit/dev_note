@@ -43,9 +43,14 @@ variable "bootstrap_password" {
   default = ""
 }
 
-variable "dcos_master_list" {
+variable "mesos_master_list" {
   type    = "list"
   default = []
+}
+
+variable "num_of_mesos_agent" {
+  type    = "string"
+  default = ""
 }
 
 variable "dcos_master_discovery" {

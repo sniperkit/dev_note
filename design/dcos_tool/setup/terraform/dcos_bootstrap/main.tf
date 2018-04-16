@@ -21,7 +21,6 @@ locals {
 }
 
 resource "null_resource" "bootstrap" {
-
   connection {
     type      = "ssh"
     host      = "${var.bootstrap_host}"

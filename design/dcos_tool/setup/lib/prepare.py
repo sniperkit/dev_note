@@ -28,12 +28,12 @@ class PrepareBootstrap:
         )
 
         bootstrap_tfvars = UseTemplate(
-            template="{0}/{1}.tpl".format(self.meta.TERRAFORM_TEMPLATE_DIR, self.meta.BOOTSTRAP_TFVARS),
+            template="{0}/{1}.tpl".format(self.meta.TERRAFORM_TEMPLATE_DIR, self.meta.TERRAFORM_VARS.get('dcos_bootstrap')),
             verb=self.verb
         )
 
         bootstrap_tfvars.create_new_file(
-            new_file="{0}/{1}".format(self.meta.TERRAFORM_TEMPORARY_DIR, self.meta.BOOTSTRAP_TFVARS),
+            new_file="{0}/{1}".format(self.meta.TERRAFORM_TEMPORARY_DIR, self.meta.TERRAFORM_VARS.get('dcos_bootstrap')),
             data_dict={
                 'BOOTSTRAP_HOST': self.configs.get('bootstrap_node').get('address'),
                 'BOOTSTRAP_SSH_PORT': self.configs.get('bootstrap_node').get('ports').get('ssh'),
@@ -49,12 +49,12 @@ class PrepareBootstrap:
 
     def mesos_master(self):
         master_tfvars = UseTemplate(
-            template="{0}/{1}.tpl".format(self.meta.TERRAFORM_TEMPLATE_DIR, self.meta.MESOS_MASTER_TFVARS),
+            template="{0}/{1}.tpl".format(self.meta.TERRAFORM_TEMPLATE_DIR, self.meta.TERRAFORM_VARS.get('mesos_master')),
             verb=self.verb
         )
 
         master_tfvars.create_new_file(
-            new_file="{0}/{1}".format(self.meta.TERRAFORM_TEMPORARY_DIR, self.meta.MESOS_MASTER_TFVARS),
+            new_file="{0}/{1}".format(self.meta.TERRAFORM_TEMPORARY_DIR, self.meta.TERRAFORM_VARS.get('mesos_master')),
             data_dict={
                 'BOOTSTRAP_HOST': self.configs.get('bootstrap_node').get('address'),
                 'BOOTSTRAP_WEB_PORT': self.configs.get('bootstrap_node').get('ports').get('web'),
@@ -67,12 +67,12 @@ class PrepareBootstrap:
 
     def mesos_agent(self):
         agent_tfvars = UseTemplate(
-            template="{0}/{1}.tpl".format(self.meta.TERRAFORM_TEMPLATE_DIR, self.meta.MESOS_AGENT_TFVARS),
+            template="{0}/{1}.tpl".format(self.meta.TERRAFORM_TEMPLATE_DIR, self.meta.TERRAFORM_VARS.get('mesos_agent')),
             verb=self.verb
         )
 
         agent_tfvars.create_new_file(
-            new_file="{0}/{1}".format(self.meta.TERRAFORM_TEMPORARY_DIR, self.meta.MESOS_AGENT_TFVARS),
+            new_file="{0}/{1}".format(self.meta.TERRAFORM_TEMPORARY_DIR, self.meta.TERRAFORM_VARS.get('mesos_agent')),
             data_dict={
                 'BOOTSTRAP_HOST': self.configs.get('bootstrap_node').get('address'),
                 'BOOTSTRAP_WEB_PORT': self.configs.get('bootstrap_node').get('ports').get('web'),

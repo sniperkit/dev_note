@@ -10,17 +10,16 @@ class MetaData:
     TERRAFORM_MODULE_DIR = abspath('./terraform')
     TERRAFORM_MODULES = dict(
         dcos_bootstrap='dcos_bootstrap',
-        mesos_master='mesos_master'
+        mesos_master='mesos_master',
+        mesos_agent='mesos_agent'
     )
     TERRAFORM_VARS = dict(
         dcos_bootstrap='bootstrap.tfvars',
-        mesos_master='mesos_master.tfvars'
+        mesos_master='mesos_master.tfvars',
+        mesos_agent='mesos_agent.tfvars'
     )
 
     BOOTSTRAP_SCRIPT = '/opt/dcos_bootstrap/dcos_generate_config.sh'
-    BOOTSTRAP_TFVARS = 'bootstrap.tfvars'
-    MESOS_MASTER_TFVARS = 'mesos_master.tfvars'
-    MESOS_AGENT_TFVARS = 'mesos_agent.tfvars'
 
     DCOS_TEMPLATE_DIR = abspath('./template/dcos')
     DCOS_TEMPORARY_DIR = abspath('./tmp/dcos')

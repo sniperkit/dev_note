@@ -23,27 +23,12 @@ variable "bootstrap_host" {
   default = ""
 }
 
-variable "bootstrap_ssh_port" {
-  type    = "string"
-  default = "22"
-}
-
 variable "bootstrap_web_port" {
   type    = "string"
   default = ""
 }
 
-variable "bootstrap_username" {
-  type    = "string"
-  default = ""
-}
-
-variable "bootstrap_password" {
-  type    = "string"
-  default = ""
-}
-
-variable "dcos_master_list" {
+variable "mesos_master_list" {
   type    = "list"
   default = []
 }

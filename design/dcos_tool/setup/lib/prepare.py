@@ -38,7 +38,7 @@ class PrepareBootstrap:
                 'BOOTSTRAP_WEB_PORT': self.configs.get('bootstrap_node').get('ports').get('web'),
                 'BOOTSTRAP_USERNAME': self.configs.get('bootstrap_node').get('username'),
                 'BOOTSTRAP_PASSWORD': self.configs.get('bootstrap_node').get('password'),
-                'DCOS_MASTER_LIST': "\", \"".join(addr for addr in self.configs.get('master_nodes').get('address')),
+                'MESOS_MASTER_LIST': "\", \"".join(addr for addr in self.configs.get('master_nodes').get('address')),
                 'DCOS_CLUSTER_NAME': self.configs.get('cluster_name'),
                 'DCOS_DOWNLOAD_PATH': self.configs.get('dcos_archive'),
                 'DCOS_IP_DETECT_SCRIPT': "{0}/{1}".format(self.meta.DCOS_TEMPORARY_DIR, self.meta.IP_DETECT)

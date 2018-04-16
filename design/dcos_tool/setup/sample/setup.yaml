@@ -14,12 +14,12 @@ master_nodes:
   address:
     - 172.27.11.162
   username: root
-  password: 'object close funny pass'
+  password: 'PASS'
 agent_nodes:
   address:
     - 172.27.11.164
   username: root
-  password: 'object close funny pass'
+  password: 'PASS'
 private_registries:
   - host: 172.27.11.167
     port: 5000

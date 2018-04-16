@@ -17,8 +17,8 @@ class MetaData:
 
     BOOTSTRAP_SCRIPT = '/opt/dcos_bootstrap/dcos_generate_config.sh'
     BOOTSTRAP_TFVARS = 'bootstrap.tfvars'
-    MESOS_MASTER_TFVARS = 'mesos_master_tfvars'
-    MESOS_AGENT_TFVARS = 'mesos_agent_tfvars'
+    MESOS_MASTER_TFVARS = 'mesos_master.tfvars'
+    MESOS_AGENT_TFVARS = 'mesos_agent.tfvars'
 
     DCOS_TEMPLATE_DIR = abspath('./template/dcos')
     DCOS_TEMPORARY_DIR = abspath('./tmp/dcos')

@@ -7,8 +7,8 @@ from .log import LogNormal
 
 
 class UseTemplate():
-    def __init__(self, template, verbosity):
-        self.verbosity = verbosity
+    def __init__(self, template, verb):
+        self.verb = verb
         self.template = template
 
     def create_new_file(self, new_file, data_dict):
@@ -22,4 +22,4 @@ class UseTemplate():
             LogNormal(
                 INFO={"message": "create {0}".format(new_file)},
                 CREATE_TEMPLATE={"new_file": new_file},
-                verbosity=self.verbosity)
+                verb=self.verb)

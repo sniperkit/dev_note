@@ -16,7 +16,7 @@ class BootstrapNode:
 
     def generate_config(self):
         cmd = "cd {0} && /bin/bash ./dcos_generate_config.sh".format(
-            self.meta.BOOTSTRAP_ROOT
+            self.meta.DCOS_TEMPORARY_DIR
         )
 
         self.shell.local(cmd, info="bootstrap configs")
@@ -24,15 +24,15 @@ class BootstrapNode:
     def start_web_service(self):
         cmd = "docker run -d -p {0}:80 -v {1}/genconf/serve:/usr/share/nginx/html:ro nginx".format(
             self.configs.get('bootstrap_node').get('port'),
-            self.meta.BOOTSTRAP_ROOT
+            self.meta.DCOS_TEMPORARY_DIR
         )
 
         self.shell.local(cmd, info="start web service")
 
 
 class MasterNode:
-    def __init__(self, configs, verbosity):
-        self.verbosity=verbosity
+    def __init__(self, configs, verb):
+        self.verb=verb
         self.meta = MetaData()
         self.configs = configs
 
@@ -45,9 +45,9 @@ class MasterNode:
                     dest_host=host,
                     dest_user=self.configs.get('master_nodes').get('username'),
                     dest_password=self.configs.get('master_nodes').get('password'),
-                    verbosity=self.verbosity)
+                    verbosity=self.verb)
 
-                master_session = Shell(verbosity=self.verbosity,
+                master_session = Shell(verb=self.verb,
                                        session=_session.login_with_password())
 
                 command = "curl -o /tmp/dcos_install.sh http://{0}:{1}/dcos_install.sh".format(
@@ -58,7 +58,7 @@ class MasterNode:
                 if self.configs.get('bootstrap_node').get('addr') == host:
                     sed_find = "^systemctl restart docker"
                     sed_replace = "docker run -d -p {0}:80 -v {1}/genconf/serve:/usr/share/nginx/html:ro nginx".format(
-                        self.configs.get('bootstrap_node').get('port'), self.meta.BOOTSTRAP_ROOT)
+                        self.configs.get('bootstrap_node').get('port'), self.meta.DCOS_TEMPORARY_DIR)
 
                     command = "sed -E -i 's#{0}#& \\n{1}#' /tmp/dcos_install.sh".format(sed_find, sed_replace)
                     master_session.local(command, info="set install script")
@@ -72,8 +72,8 @@ class MasterNode:
 
 
 class AgentNode:
-    def __init__(self, configs, verbosity):
-        self.verbosity = verbosity
+    def __init__(self, configs, verb):
+        self.verb = verb
         self.configs = configs
         self.meta = MetaData()
 
@@ -84,11 +84,11 @@ class AgentNode:
                     dest_host=host,
                     dest_user=self.configs.get('agent_nodes').get('username'),
                     dest_password=self.configs.get('agent_nodes').get('password'),
-                    verbosity=self.verbosity
+                    verbosity=self.verb
                 )
 
                 agent_session = Shell(
-                    verbosity=self.verbosity,
+                    verb=self.verb,
                     session=_session.login_with_password())
 
                 commands = dict(
@@ -113,11 +113,11 @@ class AgentNode:
                     dest_host=host,
                     dest_user=self.configs.get('agent_nodes').get('username'),
                     dest_password=self.configs.get('agent_nodes').get('password'),
-                    verbosity=self.verbosity
+                    verbosity=self.verb
                 )
 
                 agent_session = Shell(
-                    verbosity=self.verbosity,
+                    verb=self.verb,
                     session=_session.login_with_password()
                 )
 
@@ -146,7 +146,7 @@ class AgentNode:
                     )
 
                     agent_session.remote(command=commands.get("create_docker_crt_dir"),
-                                         info="create dcos cert-directory if not exist")
+                                         info="create dcos_bootstrap cert-directory if not exist")
                     agent_session.remote(command=commands.get("create_mesos_crt_dir"),
                                          info="create mesos cert-directory if not exist")
                     agent_session.remote(command=commands.get("set_docker_crt"),

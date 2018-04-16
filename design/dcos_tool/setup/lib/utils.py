@@ -9,3 +9,15 @@ def split_lines(input_byte, linebreak='\n'):
             lines.append(line.strip())
 
         return lines
+
+
+def remove_ansi_escape(line, clear=False):
+    import re
+
+    escapes = ['\x9B', '\x1B[']
+    if clear and any(escape in line for escape in escapes):
+        return ''
+
+    ansi_regex = r'(\x9B|\x1B\[)[0-?]*[ -/]*[@-~]'
+    ansi_escape = re.compile(ansi_regex, flags=re.IGNORECASE)
+    return ansi_escape.sub('', line)

@@ -5,7 +5,8 @@ import time
 import os
 import paramiko
 
-from .log import LogNormal, LogError
+from .utils import remove_ansi_escape
+from .log import LogNormal, LogError, LogWarn
 from .utils import split_lines
 
 
@@ -37,41 +38,58 @@ class SshSession():
 
 
 class Shell():
-    def __init__(self, verbosity, session=None):
+    def __init__(self, verb, session=None):
         self.session = session.invoke_shell() if session is not None else None
-        self.verbosity = verbosity
+        self.verb = verb
 
         self.retry_expire = int('60')
         self.retry_interval = int('1')
 
-    def local(self, command, info, ignore_err=False):
-        popen = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    def local(self, command, info, set_dir=None, warn=False):
+        popen = subprocess.Popen(command,
+                                 cwd=set_dir, shell=True,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
 
+        loops = 0
+        retry = 30
         while True:
-            line = popen.stdout.readline()
+            time.sleep(0.2)
+            loops = loops + 1
+            if loops > retry: break
 
-            if line != b'':
-                os.write(1, line + b'\n')
-            else:
-                break
+            line = popen.stdout.readline().strip()
+            line = remove_ansi_escape(line.decode("utf-8"), clear=True)
+            if line != '':
+                print(repr(line))
+                # os.write(1, line + b'\n')
+                loops = 0
 
         popen.stdout.close()
         return_code = popen.wait()
 
-        if not return_code == 0 and not ignore_err:
+        if not return_code == 0 and not warn:
             LogError(
-                self.verbosity,
+                self.verb,
                 INFO={"message": info},
                 LOCAL_CMD_RETURN={"cmd": command, "return_code": return_code}
             )
             for line in popen.stderr.readlines():
                 LogError(
-                    self.verbosity,
-                    INFO={"message": ''},
+                    self.verb,
+                    STDERR={"stderr": line.decode('utf8')})
+        elif not return_code == 0 and warn:
+            LogWarn(
+                self.verb,
+                INFO={"message": info}
+            )
+            for line in popen.stderr.readlines():
+                LogError(
+                    self.verb,
                     STDERR={"stderr": line.decode('utf8')})
         else:
             LogNormal(
-                self.verbosity,
+                self.verb,
                 INFO={"message": info},
                 LOCAL_CMD_RETURN={"cmd": command})
 
@@ -91,7 +109,7 @@ class Shell():
 
                 while data_buffer:
                     LogNormal(
-                        self.verbosity,
+                        self.verb,
                         INFO={"message": "getting data"},
                         STDOUT={"stdout": data_buffer}
                     )
@@ -99,13 +117,13 @@ class Shell():
 
         if chn.recv_exit_status() is 0:
             LogNormal(
-                self.verbosity,
+                self.verb,
                 INFO={"message": info},
                 REMOTE_CMD_RETURN={"cmd": command}
             )
         else:
             LogError(
-                self.verbosity,
+                self.verb,
                 INFO={"message": info},
                 REMOTE_CMD_RETURN={"cmd": command, "return_code": chn.recv_exit_status()}
             )

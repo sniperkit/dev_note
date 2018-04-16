@@ -1,18 +1,22 @@
 ---
 terraform:
   version: 0.11.6
+dcos_archive: https://downloads.dcos.io/dcos/stable/1.11.0/dcos_generate_config.sh
 cluster_name: test_cluster
 bootstrap_node:
-  addr: 172.27.11.162
-  port: 10800
-  archive: https://downloads.dcos.io/dcos/stable/dcos_generate_config.sh
+  address: 172.27.11.162
+  username: admin
+  password: '@dmin!234'
+  ports:
+    ssh: 22
+    web: 10800
 master_nodes:
-  addr:
+  address:
     - 172.27.11.162
   username: root
   password: 'object close funny pass'
 agent_nodes:
-  addr:
+  address:
     - 172.27.11.164
   username: root
   password: 'object close funny pass'

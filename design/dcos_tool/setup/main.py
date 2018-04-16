@@ -50,9 +50,9 @@ if __name__ == "__main__":
         configs=yaml.load(f_stream)
 
     if args.action == 'prepare' and args.prepare == 'bootstrap':
-        PrepareBootstrap(configs=configs, verbosity=args.verbosity)
+        PrepareBootstrap(configs=configs, verb=args.verbosity)
     if args.action == 'prepare' and args.prepare == 'application':
-        PrepareApplication(configs=configs, verbosity=args.verbosity)
+        PrepareApplication(configs=configs, verb=args.verbosity)
 
     if args.action == 'provision' and args.node == 'bootstrap':
         Bootstrap(configs=configs, verb=args.verbosity).provision()

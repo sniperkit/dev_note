@@ -9,6 +9,7 @@ class Log:
         self.fg_lightgrey = '\033[37m'
         self.fg_red = '\033[91m'
         self.fg_green = '\033[92m'
+        self.fg_yellow = '\033[93m'
 
         self.fg_set = self.fg_none
         self.fg_clear = self.fg_none
@@ -21,6 +22,7 @@ class Log:
 
         state = ''
         if show_state == 'error': state = " ... " + self.fg_red + 'ERROR' + self.fg_none
+        if show_state == 'warn' : state = " ... " + self.fg_yellow + 'WARN' + self.fg_none
         if show_state == 'pass': state = " ... " + self.fg_green + 'PASS' + self.fg_none
         if show_state == 'error' or state == '[ERROR]': self.fg_set = self.fg_bold
 
@@ -95,8 +97,41 @@ class LogError:
             )
 
 
+class LogWarn:
+    def __init__(self, verb, **kwargs):
+        self.logs = []
+        self.verbosity = verb
+
+        self.info = kwargs.get('INFO', None)
+
+        self.message = ''
+        self.header = "[WARN]"
+        self.state = "warn"
+
+        if int(verb) >= 1:
+            if self._info(): self.logs.append(self._info())
+
+        if int(verb) >= 2:
+            pass
+
+        for log in self.logs:
+            Log().output(
+                message=log.get("message"),
+                header=log.get("header"),
+                show_state=log.get("state")
+            )
+
+    def _info(self):
+        if self.info is not None:
+            return dict(
+                header="[INFO]",
+                message=self.info.get("message"),
+                state=self.state
+            )
+
+
 class LogNormal:
-    def __init__(self, verbosity, **kwargs):
+    def __init__(self, verb, **kwargs):
         self.logs = []
         self.do_log = False
 
@@ -111,10 +146,10 @@ class LogNormal:
         self.header = "[-]"
         self.state = "pass"
 
-        if int(verbosity) >= 1:
+        if int(verb) >= 1:
             if self._info(): self.logs.append(self._info())
 
-        if int(verbosity) >= 2:
+        if int(verb) >= 2:
             if self._stdout(): self.logs.append(self._stdout())
             if self._session(): self.logs.append(self._session())
             if self._shell(): self.logs.append(self._shell())

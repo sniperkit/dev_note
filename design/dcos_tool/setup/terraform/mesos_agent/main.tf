@@ -1,5 +1,5 @@
-module "dcos-mesos-master" {
-  role                           = "dcos-mesos-master"
+module "dcos-mesos-agent" {
+  role                           = "dcos-mesos-agent"
   source                         = "github.com/dcos/tf_dcos_core"
   dcos_install_mode              = "${var.state == "upgrade" ? "upgrade" : "install"}"
   dcos_version                   = "${var.dcos_version}"
@@ -7,7 +7,7 @@ module "dcos-mesos-master" {
   dcos_bootstrap_port            = "${var.bootstrap_web_port}"
 }
 
-resource "null_resource" "master" {
+resource "null_resource" "agent" {
   count = "${var.num_of_mesos_agent}"
 
   triggers  {

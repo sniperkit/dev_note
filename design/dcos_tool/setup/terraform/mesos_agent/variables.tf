@@ -18,12 +18,12 @@ variable "bootstrap_web_port" {
   default = ""
 }
 
-variable "mesos_master_list" {
+variable "mesos_agent_list" {
   type    = "list"
   default = []
 }
 
-variable "num_of_mesos_master" {
+variable "num_of_mesos_agent" {
   type    = "string"
   default = ""
 }

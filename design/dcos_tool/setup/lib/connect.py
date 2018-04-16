@@ -57,6 +57,7 @@ class Shell():
             time.sleep(0.2)
             loops = loops + 1
             if loops > retry: break
+            if popen.poll() is not None: break
 
             line = popen.stdout.readline().strip()
             line = remove_ansi_escape(line.decode("utf-8"), clear=True)

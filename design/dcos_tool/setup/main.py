@@ -80,4 +80,4 @@ if __name__ == "__main__":
         ).provision()
 
     if args.action == 'deploy':
-        Deploy(configs=configs, verbosity=args.verbosity).with_marathon()
+        Deploy(configs=configs, verb=args.verbosity).with_marathon()

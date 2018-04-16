@@ -8,9 +8,9 @@ from .log import LogError
 
 
 class Deploy:
-    def __init__(self, configs, verbosity):
+    def __init__(self, configs, verb):
         self.configs = configs
-        self.verbosity = verbosity
+        self.verb = verb
         self.meta = MetaData()
 
     def with_marathon(self):
@@ -31,8 +31,9 @@ class Deploy:
 
         for _config in _configs:
             if os.path.isfile(_config):
-                _cmd = "curl -X POST http://leader.mesos:8080/v2/apps -d @{0} -H 'Content-type: application/json'".format(_config)
-                _session = Shell(verb=self.verbosity)
+                _cmd = "curl -X POST http://{0}:8080/v2/apps -d @{1} -H 'Content-type: application/json'".format(
+                    self.configs.get('master_nodes').get('address')[0],_config)
+                _session = Shell(verb=self.verb)
                 _session.local(_cmd, info="deploy marathon application")
             else:
-                LogError(verbosity=self.verbosity, INFO={"message": "{0} exist".format(_config)})
+                LogError(verbosity=self.verb, INFO={"message": "{0} exist".format(_config)})

@@ -7,7 +7,7 @@ module "dcos-bootstrap" {
   dcos_cluster_name              = "${var.dcos_cluster_name}"
   bootstrap_private_ip           = "${var.bootstrap_host}"
   dcos_bootstrap_port            = "${var.bootstrap_web_port}"
-  mesos_master_list               = "\n - ${join("\n - ", var.dcos_master_list)}"
+  mesos_master_list               = "\n - ${join("\n - ", var.mesos_master_list)}"
   mesos_master_discovery          = "${var.dcos_master_discovery}"
   dcos_exhibitor_storage_backend = "${var.dcos_exhibitor_storage_backend}"
   dcos_resolvers                 = "\n - ${join("\n - ", var.dcos_resolvers)}"

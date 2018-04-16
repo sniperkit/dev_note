@@ -35,7 +35,7 @@ output "bootstrap_password" {
 }
 
 output "mesos_master_list" {
-  value = "${var.dcos_master_list}"
+  value = "${var.mesos_master_list}"
 }
 
 output "dcos_exhibitor_storage_backend" {

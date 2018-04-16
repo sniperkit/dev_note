@@ -42,7 +42,6 @@ def _apply(module, var_file, verb):
     _pshell.local(command="terraform apply -no-color -auto-approve -var-file={0}".format(var_file),
                   info="terraform apply {0}".format(var_file),
                   set_dir="{0}/{1}".format(META.TERRAFORM_MODULE_DIR, module))
-    pass
 
 
 class Bootstrap:

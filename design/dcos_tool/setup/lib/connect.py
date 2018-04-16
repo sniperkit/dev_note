@@ -52,7 +52,7 @@ class Shell():
                                  stderr=subprocess.PIPE)
 
         loops = 0
-        retry = 30
+        retry = 120
         while True:
             time.sleep(0.2)
             loops = loops + 1

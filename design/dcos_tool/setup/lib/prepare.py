@@ -12,6 +12,8 @@ class PrepareBootstrap:
         self.meta = MetaData()
 
         self.bootstrap()
+        self.mesos_master()
+        self.mesos_agent()
 
     def bootstrap(self):
         ip_detect = UseTemplate(

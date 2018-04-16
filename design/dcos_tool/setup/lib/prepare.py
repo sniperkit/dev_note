@@ -3,6 +3,7 @@
 
 from .template import UseTemplate
 from .meta import MetaData
+from .connect import Shell, SshSession
 
 
 class PrepareBootstrap:
@@ -90,8 +91,6 @@ class PrepareApplication:
         self.verb = verb
         self.meta = MetaData()
 
-        self.application()
-
     def application(self):
         for application in self.configs.get("applications"):
 
@@ -111,3 +110,55 @@ class PrepareApplication:
             )
 
             _call_tpl.create_new_file(new_file=_config, data_dict=_data_dict)
+
+    def trust_registry(self):
+        for host in self.configs.get('agent_nodes').get('addr'):
+            try:
+                _session = SshSession(
+                    dest_host=host,
+                    dest_user=self.configs.get('agent_nodes').get('username'),
+                    dest_password=self.configs.get('agent_nodes').get('password'),
+                    verbosity=self.verb
+                )
+
+                agent_session = Shell(
+                    verb=self.verb,
+                    session=_session.login_with_password()
+                )
+
+                for registry in self.configs.get('private_registries'):
+                    docker_cert_dir = "{0}/{1}:{2}".format(
+                        self.meta.DOCKER_CERT_DIR,
+                        registry.get('host'),
+                        registry.get('port')
+                    )
+
+                    commands = dict(
+                        create_docker_crt_dir="[ ! -d {0} ] && mkdir -p {0} || exit 0".format(
+                            docker_cert_dir
+                        ),
+                        create_mesos_crt_dir="[ ! -d {0} ] && mkdir -p {0} || exit 0".format(
+                            self.meta.MESOS_CERT_DIR
+                        ),
+                        set_docker_crt="echo '{0}' > {1}/ca.crt".format(
+                            registry.get('certificate'),
+                            docker_cert_dir
+                        ),
+                        set_mesos_crt="echo '{0}' > {1}/`echo '{0}' | openssl x509 -hash -noout`.0".format(
+                            registry.get('certificate'),
+                            self.meta.MESOS_CERT_DIR
+                        )
+                    )
+
+                    agent_session.remote(command=commands.get("create_docker_crt_dir"),
+                                         info="create dcos_bootstrap cert-directory if not exist")
+                    agent_session.remote(command=commands.get("create_mesos_crt_dir"),
+                                         info="create mesos cert-directory if not exist")
+                    agent_session.remote(command=commands.get("set_docker_crt"),
+                                         info="set docker trust registry")
+                    agent_session.remote(command=commands.get("set_mesos_crt"),
+                                         info="set mesos trust docker download")
+
+            finally:
+                if agent_session.session:
+                    agent_session.session.close()

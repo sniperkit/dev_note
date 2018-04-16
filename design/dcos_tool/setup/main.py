@@ -54,7 +54,8 @@ if __name__ == "__main__":
     if args.action == 'prepare' and args.prepare == 'bootstrap':
         PrepareBootstrap(configs=configs, verb=args.verbosity)
     if args.action == 'prepare' and args.prepare == 'application':
-        PrepareApplication(configs=configs, verb=args.verbosity)
+        PrepareApplication(configs=configs, verb=args.verbosity).application()
+        PrepareApplication(configs=configs, verb=args.verbosity).trust_registry()
 
     if args.action == 'provision' and args.node == 'bootstrap':
         Bootstrap(
@@ -77,9 +78,6 @@ if __name__ == "__main__":
             configs=configs,
             verb=args.verbosity
         ).provision()
-    # if args.action == 'provision' and args.node == 'agent':
-    #     AgentNode(configs=configs, verbosity=args.verbosity).bootstrap()
-    #     AgentNode(configs=configs, verbosity=args.verbosity).trust_registry()
 
     if args.action == 'deploy':
         Deploy(configs=configs, verbosity=args.verbosity).with_marathon()

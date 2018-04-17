@@ -2,6 +2,7 @@
 terraform:
   version: 0.11.7
 dcos_archive: https://downloads.dcos.io/dcos/stable/1.11.0/dcos_generate_config.sh
+platform: ""
 cluster_name: test_cluster
 bootstrap_node:
   address: 172.27.11.162

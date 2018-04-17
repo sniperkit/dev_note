@@ -6,9 +6,10 @@ import argparse
 import yaml
 
 from lib.meta import MetaData
-from lib.prepare import PrepareBootstrap, PrepareApplication
+from lib.prepare import create_any_provision_tfvars, PrepareApplication
 from lib.terraform import Bootstrap
 from lib.deploy import Deploy
+from .platform.any import Prepare
 
 META = MetaData()
 
@@ -52,7 +53,11 @@ if __name__ == "__main__":
         configs=yaml.load(f_stream)
 
     if args.action == 'prepare' and args.prepare == 'bootstrap':
-        PrepareBootstrap(configs=configs, verb=args.verbosity)
+        prepare_any = Prepare(configs=configs, verb=args.verbosity)
+        prepare_any.bootstrap_node()
+        prepare_any.master_node()
+        prepare_any.agent_node()
+
     if args.action == 'prepare' and args.prepare == 'application':
         PrepareApplication(configs=configs, verb=args.verbosity).application()
         PrepareApplication(configs=configs, verb=args.verbosity).trust_registry()

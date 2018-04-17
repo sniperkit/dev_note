@@ -57,27 +57,6 @@ if __name__ == "__main__":
     if args.action == 'prepare' and args.prepare == 'application':
         prepare.application(configs=configs, verb=args.verbosity)
 
-    # if args.action == 'provision' and args.node == 'bootstrap':
-    #     provision.platform_any(
-    #         tf_module=META.TERRAFORM_MODULES.get("dcos_bootstrap"),
-    #         tf_vars=META.TERRAFORM_VARS.get("dcos_bootstrap"),
-    #         configs=configs, verb=args.verbosity
-    #     )
-    #
-    # if args.action == 'provision' and args.node == 'master':
-    #     provision.platform_any(
-    #         tf_module=META.TERRAFORM_MODULES.get("mesos_master"),
-    #         tf_vars=META.TERRAFORM_VARS.get("mesos_master"),
-    #         configs=configs, verb=args.verbosity
-    #     )
-    #
-    # if args.action == 'provision' and args.node == 'agent':
-    #     provision.platform_any(
-    #         tf_module=META.TERRAFORM_MODULES.get("mesos_agent"),
-    #         tf_vars=META.TERRAFORM_VARS.get("mesos_agent"),
-    #         configs=configs, verb=args.verbosity
-    #     )
-
     if args.action == 'provision':
 
         set_platform = provision.Platform(configs=configs, verb=args.verbosity)
@@ -87,18 +66,6 @@ if __name__ == "__main__":
                 tf_module=META.TERRAFORM_MODULES.get("dcos_{}".format(args.node)),
                 tf_vars=META.TERRAFORM_VARS.get("dcos_{}".format(args.node))
             )
-
-        # if args.node == 'bootstrap':
-        #     set_platform.any(
-        #         tf_module=META.TERRAFORM_MODULES.get("dcos_bootstrap"),
-        #         tf_vars=META.TERRAFORM_VARS.get("dcos_bootstrap")
-        #     )
-
-        # if args.node == 'master':
-        #     set_platform.any(
-        #         tf_module=META.TERRAFORM_MODULES.get("dcos_master"),
-        #         tf_vars=META.TERRAFORM_VARS.get("dcos_master")
-        #     )
 
     if args.action == 'deploy':
         Deploy(configs=configs, verb=args.verbosity).with_marathon()

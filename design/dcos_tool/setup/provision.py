@@ -3,7 +3,6 @@
 
 from lib import terraform
 from lib.meta import MetaData
-from lib.prepare import create_ip_detect, create_any_provision_tfvars
 
 META = MetaData()
 

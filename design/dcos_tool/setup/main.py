@@ -6,10 +6,10 @@ import argparse
 import yaml
 
 from lib.meta import MetaData
-from lib.prepare import create_any_provision_tfvars, PrepareApplication
+from lib.prepare import create_marathon_configs, trust_docker_registry
 from lib.terraform import Bootstrap
 from lib.deploy import Deploy
-from any import Prepare
+from platform_any import Prepare
 
 META = MetaData()
 
@@ -53,14 +53,13 @@ if __name__ == "__main__":
         configs=yaml.load(f_stream)
 
     if args.action == 'prepare' and args.prepare == 'bootstrap':
-        prepare_any = Prepare(configs=configs, verb=args.verbosity)
-        prepare_any.bootstrap_node()
-        prepare_any.master_node()
-        prepare_any.agent_node()
+        Prepare(configs=configs, verb=args.verbosity)
 
     if args.action == 'prepare' and args.prepare == 'application':
-        PrepareApplication(configs=configs, verb=args.verbosity).application()
-        PrepareApplication(configs=configs, verb=args.verbosity).trust_registry()
+        # PrepareApplication(configs=configs, verb=args.verbosity).application()
+        create_marathon_configs(configs=configs, verb=args.verbosity)
+        trust_docker_registry(configs=configs, verb=args.verbosity)
+        # PrepareApplication(configs=configs, verb=args.verbosity).trust_registry()
 
     if args.action == 'provision' and args.node == 'bootstrap':
         Bootstrap(

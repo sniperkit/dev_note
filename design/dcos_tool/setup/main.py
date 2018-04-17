@@ -56,10 +56,8 @@ if __name__ == "__main__":
         Prepare(configs=configs, verb=args.verbosity)
 
     if args.action == 'prepare' and args.prepare == 'application':
-        # PrepareApplication(configs=configs, verb=args.verbosity).application()
         create_marathon_configs(configs=configs, verb=args.verbosity)
         trust_docker_registry(configs=configs, verb=args.verbosity)
-        # PrepareApplication(configs=configs, verb=args.verbosity).trust_registry()
 
     if args.action == 'provision' and args.node == 'bootstrap':
         Bootstrap(

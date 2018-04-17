@@ -8,7 +8,7 @@ from .connect import Shell, SshSession
 META = MetaData()
 
 
-def create_ip_detect(configs, verb):
+def ip_detect(configs, verb):
     _ip_detect = UseTemplate(
         template='{0}/{1}.tpl'.format(META.DCOS_TEMPLATE_DIR, META.IP_DETECT),
         verb=verb
@@ -21,7 +21,7 @@ def create_ip_detect(configs, verb):
     )
 
 
-def create_any_provision_tfvars(filename, configs, verb):
+def terraform_provision(filename, configs, verb):
     UseTemplate(
         template="{0}/any_{1}.tpl".format(META.TERRAFORM_TEMPLATE_DIR, filename),
         verb=verb
@@ -48,7 +48,7 @@ def create_any_provision_tfvars(filename, configs, verb):
     )
 
 
-def create_marathon_configs(configs, verb):
+def marathon_configs(configs, verb):
     for application in configs.get("applications"):
 
         _data_dict = {}

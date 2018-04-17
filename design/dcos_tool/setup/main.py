@@ -9,7 +9,7 @@ from lib.meta import MetaData
 from lib.prepare import create_any_provision_tfvars, PrepareApplication
 from lib.terraform import Bootstrap
 from lib.deploy import Deploy
-from .platform.any import Prepare
+from .platforms.any import Prepare
 
 META = MetaData()
 

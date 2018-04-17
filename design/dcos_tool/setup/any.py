@@ -1,8 +1,9 @@
 #!/usr/bin/python3 -u
 # -*- coding: utf-8 -*-
-from ..lib.connect import Shell, SshSession
-from ..lib.meta import MetaData
-from ..lib.prepare import create_ip_detect, create_any_provision_tfvars
+
+from lib.connect import Shell, SshSession
+from lib.meta import MetaData
+from lib.prepare import create_ip_detect, create_any_provision_tfvars
 
 META = MetaData()
 

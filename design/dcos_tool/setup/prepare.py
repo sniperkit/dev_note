@@ -27,6 +27,9 @@ class Platform:
         # agent
         prepare.terraform_provision(filename=tfvars_agent, configs=self.configs, verb=self.verb)
 
+    def aws(self):
+        print("TODO: prepare aws")
+
 
 def application(configs, verb):
 

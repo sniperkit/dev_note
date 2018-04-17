@@ -18,6 +18,6 @@ class Platform():
 
         terraform.do_install(version=terraform_version, verb=self.verb)
 
-        terraform.do_init(module=tf_module, verb=self.verb)
+        terraform.do_init(source=META.TERRAFORM_MODULE_DIR, module=tf_module, verb=self.verb)
 
         terraform.do_apply(module=tf_module, var_file=terraform_vars, verb=self.verb)

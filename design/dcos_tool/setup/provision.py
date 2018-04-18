@@ -25,8 +25,4 @@ class Platform():
         terraform.do_apply(module=tf_module, var_file=terraform_vars, verb=self.verb)
 
     def aws(self):
-        source_module = META.TERRAFORM_EXTERNAL_MODULES.get("terraform_dcos")
-        local_module  = "{}/{}".format(META.TERRAFORM_MODULE_DIR, META.TERRAFORM_LOCAL_MODULES.get("terraform_dcos"))
-
-        if os.path.isdir(local_module):
-            terraform.get_external_module(external=source_module, destination=local_module, verb=self.verb)
+        print("TODO: aws provision")

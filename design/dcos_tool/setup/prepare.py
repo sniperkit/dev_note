@@ -1,8 +1,11 @@
 #!/usr/bin/python3 -u
 # -*- coding: utf-8 -*-
 
+import os
+
 from lib.meta import MetaData
 from lib import prepare
+from lib import terraform
 
 META = MetaData()
 
@@ -28,7 +31,11 @@ class Platform:
         prepare.terraform_provision(filename=tfvars_agent, configs=self.configs, verb=self.verb)
 
     def aws(self):
-        print("TODO: prepare aws")
+        source_module = META.TERRAFORM_EXTERNAL_MODULES.get("terraform_dcos")
+        local_module  = "{}/{}".format(META.TERRAFORM_MODULE_DIR, META.TERRAFORM_LOCAL_MODULES.get("terraform_dcos"))
+
+        if not os.path.isdir(local_module):
+            terraform.get_external_module(external=source_module, destination=local_module, verb=self.verb)
 
 
 def application(configs, verb):

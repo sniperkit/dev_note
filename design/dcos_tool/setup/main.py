@@ -52,13 +52,17 @@ if __name__ == "__main__":
         configs=yaml.load(f_stream)
 
     if args.action == 'prepare' and args.prepare == 'bootstrap':
-        prepare.Platform(configs=configs, verb=args.verbosity).any()
+        set_platform = prepare.Platform(configs=configs, verb=args.verbosity)
+
+        if configs.get("platform") == "aws":
+            set_platform.aws()
+        else:
+            set_platform.any()
 
     if args.action == 'prepare' and args.prepare == 'application':
         prepare.application(configs=configs, verb=args.verbosity)
 
     if args.action == 'provision' and args.node in ["bootstrap", "master", "agent"]:
-
         set_platform = provision.Platform(configs=configs, verb=args.verbosity)
 
         if configs.get("platform") == "aws":

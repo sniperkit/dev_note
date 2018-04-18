@@ -8,10 +8,14 @@ class MetaData:
     TERRAFORM_TEMPORARY_DIR = abspath('./tmp/terraform')
     TERRAFORM_RUN_DIR = '/usr/bin'
     TERRAFORM_MODULE_DIR = abspath('./terraform')
-    TERRAFORM_MODULES = dict(
+    TERRAFORM_LOCAL_MODULES = dict(
         dcos_bootstrap='dcos_bootstrap',
         dcos_master='mesos_master',
-        dcos_agent='mesos_agent'
+        dcos_agent='mesos_agent',
+        terraform_dcos='terraform_dcos'
+    )
+    TERRAFORM_EXTERNAL_MODULES = dict(
+        terraform_dcos='https://github.com/dcos/terraform-dcos'
     )
     TERRAFORM_VARS = dict(
         dcos_bootstrap='bootstrap.tfvars',

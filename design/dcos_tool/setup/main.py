@@ -57,13 +57,15 @@ if __name__ == "__main__":
     if args.action == 'prepare' and args.prepare == 'application':
         prepare.application(configs=configs, verb=args.verbosity)
 
-    if args.action == 'provision':
+    if args.action == 'provision' and args.node in ["bootstrap", "master", "agent"]:
 
         set_platform = provision.Platform(configs=configs, verb=args.verbosity)
 
-        if args.node in ["bootstrap", "master", "agent"]:
+        if configs.get("platform") == "aws":
+            set_platform.aws()
+        else:
             set_platform.any(
-                tf_module=META.TERRAFORM_MODULES.get("dcos_{}".format(args.node)),
+                tf_module=META.TERRAFORM_LOCAL_MODULES.get("dcos_{}".format(args.node)),
                 tf_vars=META.TERRAFORM_VARS.get("dcos_{}".format(args.node))
             )
 

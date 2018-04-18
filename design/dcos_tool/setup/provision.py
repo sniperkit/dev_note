@@ -25,4 +25,4 @@ class Platform():
         terraform.do_apply(module=tf_module, var_file=terraform_vars, verb=self.verb)
 
     def aws(self):
-        print("TODO: aws provision")
+        raise NotImplementedError()

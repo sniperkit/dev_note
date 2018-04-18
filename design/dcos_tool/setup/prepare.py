@@ -34,8 +34,7 @@ class Platform:
         source_module = META.TERRAFORM_EXTERNAL_MODULES.get("terraform_dcos")
         local_module  = "{}/{}".format(META.TERRAFORM_MODULE_DIR, META.TERRAFORM_LOCAL_MODULES.get("terraform_dcos"))
 
-        if not os.path.isdir(local_module):
-            terraform.get_external_module(external=source_module, destination=local_module, verb=self.verb)
+        terraform.get_external_module(external=source_module, destination=local_module, verb=self.verb)
 
 
 def application(configs, verb):

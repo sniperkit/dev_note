@@ -4,7 +4,7 @@ import os
 
 from .connect import Shell
 from .meta import MetaData
-from .log import LogNormal
+from .log import LogNormal, LogWarn
 
 META = MetaData()
 
@@ -47,6 +47,10 @@ def do_apply(module, var_file, verb):
 
 
 def get_external_module(external, destination, verb):
+    if os.path.isdir(destination):
+        LogWarn(INFO={"message": "{} exist, ignore clone".format(os.path.basename(destination))}, verb=verb)
+        return False
+
     _pshell = Shell(verb)
 
     _pshell.local(command="git clone {} {}".format(external, destination),

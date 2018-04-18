@@ -3,24 +3,46 @@ terraform:
   version: 0.11.7
 dcos_archive: https://downloads.dcos.io/dcos/stable/1.11.0/dcos_generate_config.sh
 platform: ""
+
+# when platform is set to aws
+aws:
+  region: "us-west-2"
+  bootstrap:
+    instance_type: "t2.micro"
+    instance_disk_size_gb: 20
+  master:
+    instance_type: "t2.micro"
+    instance_disk_size_gb: 20
+  agent:
+    private:
+      instance_type: "t2.micro"
+      instance_disk_size_gb: 20
+    public:
+      instance_type: "t2.micro"
+      instance_disk_size_gb: 20
+
+# when platform is not specified
+any:
+  bootstrap_node:
+    address: 172.27.11.162
+    username: admin
+    password: '@dmin!234'
+    ports:
+      ssh: 22
+      web: 10800
+  master_nodes:
+    address:
+      - 172.27.11.162
+    username: root
+    password: 'PASS'
+  agent_nodes:
+    address:
+      - 172.27.11.164
+    username: root
+    password: 'PASS'
+
+
 cluster_name: test_cluster
-bootstrap_node:
-  address: 172.27.11.162
-  username: admin
-  password: '@dmin!234'
-  ports:
-    ssh: 22
-    web: 10800
-master_nodes:
-  address:
-    - 172.27.11.162
-  username: root
-  password: 'PASS'
-agent_nodes:
-  address:
-    - 172.27.11.164
-  username: root
-  password: 'PASS'
 private_registries:
   - host: 172.27.11.167
     port: 5000
@@ -45,6 +67,8 @@ private_registries:
                  0Cprdk86msxCA8KW5yWzfM5hxNsdlXQkVtjJk0NIN8Z5Usu4zVjp7FFMorFV20lI
                  fKyHd9NWjJtL+3pr97824qaH+ycLtxOQrzAajaCoPWQp2l4L
                  -----END CERTIFICATE-----
+
+
 applications:
   - name: cassandra
     version: 3.9_custom_single

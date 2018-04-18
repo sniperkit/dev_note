@@ -21,30 +21,58 @@ def ip_detect(configs, verb):
     )
 
 
+def _map_tfvars_if_any(configs):
+    dplatform = configs.get('any')
+
+    return {
+        'DCOS_CLUSTER_NAME': configs.get('cluster_name'),
+        'DCOS_DOWNLOAD_PATH': configs.get('dcos_archive'),
+        'DCOS_IP_DETECT_SCRIPT': "{0}/{1}".format(META.DCOS_TEMPORARY_DIR, META.IP_DETECT),
+        'BOOTSTRAP_HOST': dplatform.get('bootstrap_node').get('address'),
+        'BOOTSTRAP_SSH_PORT': dplatform.get('bootstrap_node').get('ports').get('ssh'),
+        'BOOTSTRAP_WEB_PORT': dplatform.get('bootstrap_node').get('ports').get('web'),
+        'BOOTSTRAP_USERNAME': dplatform.get('bootstrap_node').get('username'),
+        'BOOTSTRAP_PASSWORD': dplatform.get('bootstrap_node').get('password'),
+        'MESOS_MASTER_LIST': "\", \"".join(addr for addr in dplatform.get('master_nodes').get('address')),
+        'MESOS_MASTER_COUNT': len(dplatform.get('master_nodes').get('address')),
+        'MESOS_MASTER_USERNAME': dplatform.get('master_nodes').get('username'),
+        'MESOS_MASTER_PASSWORD': dplatform.get('master_nodes').get('password'),
+        'MESOS_AGENT_LIST': "\", \"".join(addr for addr in dplatform.get('agent_nodes').get('address')),
+        'MESOS_AGENT_COUNT': len(dplatform.get('agent_nodes').get('address')),
+        'MESOS_AGENT_USERNAME': dplatform.get('agent_nodes').get('username'),
+        'MESOS_AGENT_PASSWORD': dplatform.get('agent_nodes').get('password')
+    }
+
+
+def _map_tfvars_if_aws(configs):
+    return {
+        'MESOS_MASTER_COUNT': "",
+        "MESOS_AGENT_COUNT": "",
+        "MESOS_PUBLIC_AGENT_COUNT": "",
+        'AWS_REGION': "",
+        'AWS_BOOTSTRAP_INSTANCE_TYPE': "",
+        'AWS_BOOTSTRAP_INSTANCE_DISK_SIZE': "",
+        'AWS_MASTER_INSTANCE_TYPE': "",
+        'AWS_MASTER_INSTANCE_DISK_SIZE': "",
+        'AWS_AGENT_INSTANCE_TYPE': "",
+        'AWS_AGENT_INSTANCE_DISK_SIZE': "",
+        'AWS_PUBLIC_AGENT_INSTANCE_TYPE': "",
+        'AWS_PUBLIC_AGENT_INSTANCE_DISK_SIZE': ""
+    }
+
+
 def terraform_provision(filename, configs, verb):
+    if configs.get("platform") == 'aws':
+        ddata = _map_tfvars_if_any(configs)
+    else:
+        ddata = _map_tfvars_if_any(configs)
+
     UseTemplate(
         template="{0}/any_{1}.tpl".format(META.TERRAFORM_TEMPLATE_DIR, filename),
         verb=verb
     ).create_new_file(
         new_file="{0}/{1}".format(META.TERRAFORM_TEMPORARY_DIR, filename),
-        data_dict={
-            'DCOS_CLUSTER_NAME': configs.get('cluster_name'),
-            'DCOS_DOWNLOAD_PATH': configs.get('dcos_archive'),
-            'DCOS_IP_DETECT_SCRIPT': "{0}/{1}".format(META.DCOS_TEMPORARY_DIR, META.IP_DETECT),
-            'BOOTSTRAP_HOST': configs.get('bootstrap_node').get('address'),
-            'BOOTSTRAP_SSH_PORT': configs.get('bootstrap_node').get('ports').get('ssh'),
-            'BOOTSTRAP_WEB_PORT': configs.get('bootstrap_node').get('ports').get('web'),
-            'BOOTSTRAP_USERNAME': configs.get('bootstrap_node').get('username'),
-            'BOOTSTRAP_PASSWORD': configs.get('bootstrap_node').get('password'),
-            'MESOS_MASTER_LIST': "\", \"".join(addr for addr in configs.get('master_nodes').get('address')),
-            'MESOS_MASTER_COUNT': len(configs.get('master_nodes').get('address')),
-            'MESOS_MASTER_USERNAME': configs.get('master_nodes').get('username'),
-            'MESOS_MASTER_PASSWORD': configs.get('master_nodes').get('password'),
-            'MESOS_AGENT_LIST': "\", \"".join(addr for addr in configs.get('agent_nodes').get('address')),
-            'MESOS_AGENT_COUNT': len(configs.get('agent_nodes').get('address')),
-            'MESOS_AGENT_USERNAME': configs.get('agent_nodes').get('username'),
-            'MESOS_AGENT_PASSWORD': configs.get('agent_nodes').get('password')
-        }
+        data_dict=ddata
     )
 
 

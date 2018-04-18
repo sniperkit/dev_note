@@ -30,18 +30,12 @@ def do_install(version, verb):
 
 
 def do_init(source, module, verb):
-    _init_dir = "{0}/{1}".format(META.TERRAFORM_TEMPORARY_DIR, module)
-
-    if not os.path.exists(_init_dir):
-        os.makedirs(_init_dir)
 
     _pshell = Shell(verb)
 
-    # _pshell.local(command="terraform init -from-module {}/{} -no-color".format(source, module),
-    #               info="terraform init",
-    #               set_dir="{0}/{1}".format(META.TERRAFORM_MODULE_DIR, module))
-    _pshell.local(command="terraform init -from-module {}/{} -no-color".format(source, module),
-                  info="terraform init",set_dir=_init_dir)
+    _pshell.local(command="terraform init -no-color".format(source, module),
+                  info="terraform init",
+                  set_dir="{0}/{1}".format(META.TERRAFORM_MODULE_DIR, module))
 
 
 def do_apply(module, var_file, verb):

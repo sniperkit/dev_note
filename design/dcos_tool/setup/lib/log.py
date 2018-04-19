@@ -48,7 +48,7 @@ class LogError:
         if int(verb) >= 1:
             if self._info(): self.logs.append(self._info())
 
-        if int(verb) >= 2:
+        if int(verb) >= 3:
             if self._debug(): self.logs.append(self._debug())
             if self._stderr(): self.logs.append(self._stderr())
             if self._shell(): self.logs.append(self._shell())
@@ -122,7 +122,7 @@ class LogWarn:
         if int(verb) >= 1:
             if self._info(): self.logs.append(self._info())
 
-        if int(verb) >= 2:
+        if int(verb) >= 3:
             if self._debug(): self.logs.append(self._debug())
 
         for log in self.logs:

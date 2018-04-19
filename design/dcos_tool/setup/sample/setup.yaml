@@ -21,16 +21,16 @@ aws:
     instance_disk_size_gb: 20
   master_nodes:
     count: 1
-    instance_type: "m3.xlarge" # need instance type supports ebs optimization
+    instance_type: "m3.xlarge" #instance type need to supports ebs optimization
     instance_disk_size_gb: 20
   agent_nodes:
     private:
       count: 1
-      instance_type: "t2.micro"
+      instance_type: "m3.xlarge" #instance type need to supports ebs optimization
       instance_disk_size_gb: 20
     public:
       count: 1
-      instance_type: "t2.micro"
+      instance_type: "m3.xlarge" #instance type need to supports ebs optimization
       instance_disk_size_gb: 20
 
 # when platform set to any

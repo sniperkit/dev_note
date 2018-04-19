@@ -54,6 +54,14 @@ def do_destroy(module, var_file, verb):
                   set_dir="{0}/{1}".format(META.TERRAFORM_MODULE_DIR, module))
 
 
+def show_output(module, verb):
+    _pshell = Shell(verb)
+
+    _pshell.local(command="terraform output -no-color",
+                  info="terraform output {0}",
+                  set_dir="{0}/{1}".format(META.TERRAFORM_MODULE_DIR, module))
+
+
 def get_external_module(external, destination, verb):
     if os.path.isdir(destination):
         LogWarn(INFO={"message": "{} exist, ignore setup".format(os.path.basename(destination))}, verb=verb)

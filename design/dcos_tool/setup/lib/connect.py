@@ -61,7 +61,7 @@ class Shell():
             line = popen.stdout.readline().strip()
             line = remove_ansi_escape(line.decode("utf-8"), clear=True)
             if line != '':
-                print(repr(line))
+                LogNormal(STDOUT={'stdout': line}, verb=self.verb)
                 loops = 0
 
         popen.stdout.close()

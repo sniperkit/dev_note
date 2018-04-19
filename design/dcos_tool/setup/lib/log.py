@@ -170,8 +170,10 @@ class LogNormal:
             if self._info(): self.logs.append(self._info())
 
         if int(verb) >= 2:
-            if self._debug(): self.logs.append(self._debug())
             if self._stdout(): self.logs.append(self._stdout())
+
+        if int(verb) >= 3:
+            if self._debug(): self.logs.append(self._debug())
             if self._session(): self.logs.append(self._session())
             if self._shell(): self.logs.append(self._shell())
             if self._template(): self.logs.append(self._template())

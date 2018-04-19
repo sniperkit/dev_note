@@ -12,8 +12,8 @@ dcos:
 aws:
   region: "us-west-2"
   access:
-    id: ""
-    secret: ""
+    id: "sample"
+    secret: "sample"
   ssh_key_name: "sample"
   ssh_private_key_filepath: "/tmp/sample.pem"
   bootstrap_node:
@@ -21,7 +21,7 @@ aws:
     instance_disk_size_gb: 20
   master_nodes:
     count: 1
-    instance_type: "m3.xlarge"
+    instance_type: "m3.xlarge" # need instance type supports ebs optimization
     instance_disk_size_gb: 20
   agent_nodes:
     private:

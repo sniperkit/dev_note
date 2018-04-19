@@ -1,17 +1,27 @@
 ---
 terraform:
   version: 0.11.7
-dcos_archive: https://downloads.dcos.io/dcos/stable/1.11.0/dcos_generate_config.sh
+
+dcos:
+  version: 1.11.0
+  archive: https://downloads.dcos.io/dcos/stable/1.11.0/dcos_generate_config.sh
+  cluster_name: test_cluster
+  oauth_enabled: false
 
 # when platform set to aws
 aws:
   region: "us-west-2"
+  access:
+    id: ""
+    secret: ""
+  ssh_key_name: "chinya"
+  ssh_private_key_filepath: "/tmp/chinya.pem"
   bootstrap_node:
     instance_type: "t2.micro"
     instance_disk_size_gb: 20
   master_nodes:
     count: 1
-    instance_type: "t2.micro"
+    instance_type: "m3.xlarge"
     instance_disk_size_gb: 20
   agent_nodes:
     private:
@@ -44,7 +54,6 @@ any:
     password: 'PASS'
 
 
-cluster_name: test_cluster
 private_registries:
   - host: 172.27.11.167
     port: 5000

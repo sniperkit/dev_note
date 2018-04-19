@@ -103,6 +103,7 @@ class LogWarn:
         self.verbosity = verb
 
         self.info = kwargs.get('INFO', None)
+        self.debug = kwargs.get('DEBUG', None)
 
         self.message = ''
         self.header = "[WARN]"
@@ -112,7 +113,7 @@ class LogWarn:
             if self._info(): self.logs.append(self._info())
 
         if int(verb) >= 2:
-            pass
+            if self._debug(): self.logs.append(self._debug())
 
         for log in self.logs:
             Log().output(
@@ -127,6 +128,14 @@ class LogWarn:
                 header="[INFO]",
                 message=self.info.get("message"),
                 state=self.state
+            )
+
+    def _debug(self):
+        if self.debug is not None:
+            return dict(
+                header="[DEBUG]",
+                message=self.debug.get("message"),
+                state=None
             )
 
 

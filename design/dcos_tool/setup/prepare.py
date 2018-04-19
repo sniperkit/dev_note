@@ -33,10 +33,14 @@ class Platform:
         source_module = META.TERRAFORM_EXTERNAL_MODULES.get("terraform_dcos")
         local_module  = "{}/{}".format(META.TERRAFORM_MODULE_DIR, META.TERRAFORM_LOCAL_MODULES.get("terraform_dcos"))
         tfvars_dcos   = META.TERRAFORM_VARS.get('terraform_dcos')
+        access_key_id = self.configs.get('aws').get('access').get('id')
+        access_secret = self.configs.get('aws').get('access').get('secret')
 
         terraform.get_external_module(external=source_module, destination=local_module, verb=self.verb)
 
         prepare.terraform_provision(filename=tfvars_dcos, configs=self.configs, verb=self.verb)
+
+        prepare.aws_access_credential(id=access_key_id, secret=access_secret, verb=self.verb)
 
 
 def application(configs, verb):

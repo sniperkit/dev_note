@@ -80,5 +80,5 @@ variable "dcos_process_timeout" {
 
 variable "dcos_oauth_enabled" {
   type    = "string"
-  default = "false"
+  default = "true"
 }

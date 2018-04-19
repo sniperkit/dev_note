@@ -46,6 +46,14 @@ def do_apply(module, var_file, verb):
                   set_dir="{0}/{1}".format(META.TERRAFORM_MODULE_DIR, module))
 
 
+def do_destroy(module, var_file, verb):
+    _pshell = Shell(verb)
+
+    _pshell.local(command="terraform destroy -no-color -auto-approve -var-file={0}".format(var_file),
+                  info="terraform apply {0}".format(var_file),
+                  set_dir="{0}/{1}".format(META.TERRAFORM_MODULE_DIR, module))
+
+
 def get_external_module(external, destination, verb):
     if os.path.isdir(destination):
         LogWarn(INFO={"message": "{} exist, ignore clone".format(os.path.basename(destination))}, verb=verb)

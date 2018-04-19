@@ -5,7 +5,7 @@ import os
 import argparse
 import yaml
 
-import prepare, provision
+import prepare, provision, destroy
 
 from lib.meta import MetaData
 from lib.deploy import Deploy
@@ -18,7 +18,7 @@ def cli_menu_parser():
     parser = argparse.ArgumentParser(description='GE tool for environment provision and application deployment')
 
     parser.add_argument('-a', '--action',
-                        choices=['prepare', 'provision', 'deploy'],
+                        choices=['prepare', 'provision', 'deploy', 'destroy'],
                         help='run action',
                         required=True)
 
@@ -31,7 +31,7 @@ def cli_menu_parser():
                         choices=['aws', 'any'],
                         help='set platform',
                         required=('-a' or '--action') and
-                                 ('prepare' or 'provision') in os.sys.argv,
+                                 ('prepare' or 'provision', 'teardown') in os.sys.argv,
                         default='any')
 
     parser.add_argument('-n', '--node',
@@ -103,3 +103,13 @@ if __name__ == "__main__":
 
     if args.action == 'deploy':
         Deploy(configs=configs, verb=args.verbosity).with_marathon()
+
+    if args.arction == 'destroy':
+        set_platform = destroy.Platform(configs=configs, verb=args.verbosity)
+
+        if args.platform == "aws":
+            set_platform.aws(
+                tf_module="{}/aws".format(META.TERRAFORM_LOCAL_MODULES.get("terraform_dcos")),
+                tf_vars="aws_{}".format(META.TERRAFORM_VARS.get("terraform_dcos")))
+        else:
+            set_platform.any()

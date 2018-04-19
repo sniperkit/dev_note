@@ -1,6 +1,8 @@
 #!/usr/bin/python3 -u
 # -*- coding: utf-8 -*-
 
+from os.path import basename
+
 from .template import UseTemplate
 from .meta import MetaData
 from .connect import Shell, SshSession
@@ -22,16 +24,31 @@ def ip_detect(bootstrap_host, verb):
     )
 
 
+def aws_access_credential(id, secret, verb):
+    template_path = '{0}/{1}.tpl'.format(META.AWS_TEMPLATE_DIR, basename(META.AWS_ACCESS_KEY_FILEPATH))
+
+    UseTemplate(
+        template=template_path, verb=verb
+    ).create_new_file(
+        new_file=META.AWS_ACCESS_KEY_FILEPATH,
+        data_dict={
+            'AWS_ACCESS_KEY_ID': id,
+            'AWS_SECRET_ACCESS_KEY': secret}
+    )
+
+
 def _map_tfvars_if_any(configs):
+    ddcos      = configs.get('dcos')
     dplatform  = configs.get('any')
     dbootstrap = dplatform.get('bootstrap_node')
     dmasters   = dplatform.get('master_nodes')
     dagents    = dplatform.get('agent_nodes')
 
     return {
-        'DCOS_CLUSTER_NAME': configs.get('cluster_name'),
-        'DCOS_DOWNLOAD_PATH': configs.get('dcos_archive'),
+        'DCOS_CLUSTER_NAME': ddcos.get('cluster_name'),
+        'DCOS_DOWNLOAD_PATH': ddcos.get('archive'),
         'DCOS_IP_DETECT_SCRIPT': "{0}/{1}".format(META.DCOS_TEMPORARY_DIR, META.IP_DETECT),
+        'DCOS_OAUTH_ENABLED': ddcos.get('oauth_enabled'),
         'BOOTSTRAP_HOST': dbootstrap.get('address'),
         'BOOTSTRAP_SSH_PORT': dbootstrap.get('ports').get('ssh'),
         'BOOTSTRAP_WEB_PORT': dbootstrap.get('ports').get('web'),
@@ -49,6 +66,7 @@ def _map_tfvars_if_any(configs):
 
 
 def _map_tfvars_if_aws(configs):
+    ddcos           = configs.get('dcos')
     dplatform       = configs.get('aws')
     dbootstrap      = dplatform.get('bootstrap_node')
     dmasters        = dplatform.get('master_nodes')
@@ -56,6 +74,10 @@ def _map_tfvars_if_aws(configs):
     dagents_public  = dplatform.get('agent_nodes').get('public')
 
     return {
+        'DCOS_VERSION': ddcos.get('version'),
+        'DCOS_OAUTH_ENABLED' : ddcos.get('oauth_enabled'),
+        'SSH_KEY_NAME': dplatform.get('ssh_key_name'),
+        'SSH_PRIVATE_KEY_FILEPATH': dplatform.get('ssh_private_key_filepath'),
         'MESOS_MASTER_COUNT': dmasters.get('count'),
         "MESOS_AGENT_COUNT": dagents.get('count'),
         "MESOS_PUBLIC_AGENT_COUNT": dagents.get('count'),

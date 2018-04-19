@@ -22,7 +22,7 @@ class Platform():
 
         terraform.do_apply(module=tf_module, var_file=terraform_vars, verb=self.verb)
 
-    def aws(self, tf_module, tf_vars): # TODO: verify provision when vpc resource frees up
+    def aws(self, tf_module, tf_vars):
         terraform_version = self.configs.get("terraform").get("version")
         terraform_vars    = "{0}/{1}".format(META.TERRAFORM_TEMPORARY_DIR, tf_vars)
 

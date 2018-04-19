@@ -1,3 +1,7 @@
+dcos_version = "${DCOS_VERSION}"
+dcos_oauth_enabled = "${DCOS_OAUTH_ENABLED}"
+ssh_key_name = "${SSH_KEY_NAME}"
+ssh_private_key_filename = "${SSH_PRIVATE_KEY_FILEPATH}"
 aws_region = "${AWS_REGION}"
 aws_bootstrap_instance_type = "${AWS_BOOTSTRAP_INSTANCE_TYPE}"
 aws_bootstrap_instance_disk_size = "${AWS_BOOTSTRAP_INSTANCE_DISK_SIZE}"

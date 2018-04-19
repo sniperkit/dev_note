@@ -14,8 +14,8 @@ aws:
   access:
     id: ""
     secret: ""
-  ssh_key_name: "chinya"
-  ssh_private_key_filepath: "/tmp/chinya.pem"
+  ssh_key_name: "sample"
+  ssh_private_key_filepath: "/tmp/sample.pem"
   bootstrap_node:
     instance_type: "t2.micro"
     instance_disk_size_gb: 20
@@ -38,7 +38,7 @@ any:
   bootstrap_node:
     address: 172.27.11.162
     username: admin
-    password: '@dmin!234'
+    password: 'pass'
     ports:
       ssh: 22
       web: 10800

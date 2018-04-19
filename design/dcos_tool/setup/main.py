@@ -31,7 +31,7 @@ def cli_menu_parser():
                         choices=['aws', 'any'],
                         help='set platform',
                         required=('-a' or '--action') and
-                                 ('prepare' or 'provision', 'teardown') in os.sys.argv,
+                                 ('prepare' or 'provision' or 'destroy') in os.sys.argv,
                         default='any')
 
     parser.add_argument('-n', '--node',
@@ -94,7 +94,7 @@ if __name__ == "__main__":
         if args.platform == "aws":
             set_platform.aws(
                 tf_module="{}/aws".format(META.TERRAFORM_LOCAL_MODULES.get("terraform_dcos")),
-                tf_vars="aws_{}".format(META.TERRAFORM_VARS.get("terraform_dcos")))
+                tf_vars=META.TERRAFORM_VARS.get("terraform_dcos"))
         else:
             set_platform.any(
                 tf_module=META.TERRAFORM_LOCAL_MODULES.get("dcos_{}".format(args.node)),
@@ -104,12 +104,12 @@ if __name__ == "__main__":
     if args.action == 'deploy':
         Deploy(configs=configs, verb=args.verbosity).with_marathon()
 
-    if args.arction == 'destroy':
+    if args.action == 'destroy':
         set_platform = destroy.Platform(configs=configs, verb=args.verbosity)
 
         if args.platform == "aws":
             set_platform.aws(
                 tf_module="{}/aws".format(META.TERRAFORM_LOCAL_MODULES.get("terraform_dcos")),
-                tf_vars="aws_{}".format(META.TERRAFORM_VARS.get("terraform_dcos")))
+                tf_vars=META.TERRAFORM_VARS.get("terraform_dcos"))
         else:
             set_platform.any()

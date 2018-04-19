@@ -14,20 +14,16 @@ class Platform():
 
     def any(self, tf_module, tf_vars):
         terraform_version = self.configs.get("terraform").get("version")
-        terraform_vars    = "{0}/{1}".format(META.TERRAFORM_TEMPORARY_DIR, tf_vars)
+        terraform_vars    = "{0}/any_{1}".format(META.TERRAFORM_TEMPORARY_DIR, tf_vars)
 
         terraform.do_install(version=terraform_version, verb=self.verb)
-
         terraform.do_init(source=META.TERRAFORM_MODULE_DIR, module=tf_module, verb=self.verb)
-
         terraform.do_apply(module=tf_module, var_file=terraform_vars, verb=self.verb)
 
     def aws(self, tf_module, tf_vars):
         terraform_version = self.configs.get("terraform").get("version")
-        terraform_vars    = "{0}/{1}".format(META.TERRAFORM_TEMPORARY_DIR, tf_vars)
+        terraform_vars    = "{0}/aws_{1}".format(META.TERRAFORM_TEMPORARY_DIR, tf_vars)
 
         terraform.do_install(version=terraform_version, verb=self.verb)
-
         terraform.do_init(source=META.TERRAFORM_MODULE_DIR, module=tf_module, verb=self.verb)
-
         terraform.do_apply(module=tf_module, var_file=terraform_vars, verb=self.verb)

@@ -56,7 +56,7 @@ def do_destroy(module, var_file, verb):
 
 def get_external_module(external, destination, verb):
     if os.path.isdir(destination):
-        LogWarn(INFO={"message": "{} exist, ignore clone".format(os.path.basename(destination))}, verb=verb)
+        LogWarn(INFO={"message": "{} exist, ignore setup".format(os.path.basename(destination))}, verb=verb)
         return False
 
     _pshell = Shell(verb)

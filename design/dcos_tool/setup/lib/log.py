@@ -30,11 +30,12 @@ class Log:
 
 
 class LogError:
-    def __init__(self, verbosity, **kwargs):
+    def __init__(self, verb, **kwargs):
         self.logs = []
-        self.verbosity = verbosity
+        self.verb = verb
 
         self.info = kwargs.get('INFO', None)
+        self.debug = kwargs.get('DEBUG', None)
         self.stderr = kwargs.get('STDERR', None)
         self.ssh_connect = kwargs.get('SSH_CONNECT', None)
         self.local_cmd_return = kwargs.get('LOCAL_CMD_RETURN', None)
@@ -44,10 +45,11 @@ class LogError:
         self.header = "[ERROR]"
         self.state = "error"
 
-        if int(verbosity) >= 1:
+        if int(verb) >= 1:
             if self._info(): self.logs.append(self._info())
 
-        if int(verbosity) >= 2:
+        if int(verb) >= 2:
+            if self._debug(): self.logs.append(self._debug())
             if self._stderr(): self.logs.append(self._stderr())
             if self._shell(): self.logs.append(self._shell())
 
@@ -64,6 +66,14 @@ class LogError:
                 header="[INFO]",
                 message=self.info.get("message"),
                 state=self.state
+            )
+
+    def _debug(self):
+        if self.debug is not None:
+            return dict(
+                header="[DEBUG]",
+                message=self.debug.get("message"),
+                state=None
             )
 
     def _stderr(self):

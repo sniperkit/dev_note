@@ -48,7 +48,7 @@ def _map_tfvars_if_any(configs):
         'DCOS_CLUSTER_NAME': ddcos.get('cluster_name'),
         'DCOS_DOWNLOAD_PATH': ddcos.get('archive'),
         'DCOS_IP_DETECT_SCRIPT': "{0}/{1}".format(META.DCOS_TEMPORARY_DIR, META.IP_DETECT),
-        'DCOS_OAUTH_ENABLED': ddcos.get('oauth_enabled'),
+        'DCOS_OAUTH_ENABLED' : ddcos.get('oauth_enabled'),
         'BOOTSTRAP_HOST': dbootstrap.get('address'),
         'BOOTSTRAP_SSH_PORT': dbootstrap.get('ports').get('ssh'),
         'BOOTSTRAP_WEB_PORT': dbootstrap.get('ports').get('web'),

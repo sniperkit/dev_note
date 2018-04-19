@@ -136,6 +136,7 @@ class LogNormal:
         self.do_log = False
 
         self.info = kwargs.get('INFO', None)
+        self.debug = kwargs.get('DEBUG', None)
         self.stdout = kwargs.get('STDOUT', None)
         self.ssh_connect = kwargs.get('SSH_CONNECT', None)
         self.template_create_new = kwargs.get('CREATE_TEMPLATE', None)
@@ -150,6 +151,7 @@ class LogNormal:
             if self._info(): self.logs.append(self._info())
 
         if int(verb) >= 2:
+            if self._debug(): self.logs.append(self._debug())
             if self._stdout(): self.logs.append(self._stdout())
             if self._session(): self.logs.append(self._session())
             if self._shell(): self.logs.append(self._shell())
@@ -168,6 +170,14 @@ class LogNormal:
                 header="[INFO]",
                 message=self.info.get("message"),
                 state=self.state
+            )
+
+    def _debug(self):
+        if self.debug is not None:
+            return dict(
+                header="[DEBUG]",
+                message=self.debug.get("message"),
+                state=None
             )
 
     def _stdout(self):

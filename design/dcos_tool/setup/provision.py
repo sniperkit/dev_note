@@ -1,8 +1,6 @@
 #!/usr/bin/python3 -u
 # -*- coding: utf-8 -*-
 
-import os
-
 from lib import terraform
 from lib.meta import MetaData
 
@@ -24,5 +22,12 @@ class Platform():
 
         terraform.do_apply(module=tf_module, var_file=terraform_vars, verb=self.verb)
 
-    def aws(self):
-        raise NotImplementedError()
+    def aws(self, tf_module, tf_vars): # TODO: verify provision when vpc resource frees up
+        terraform_version = self.configs.get("terraform").get("version")
+        terraform_vars    = "{0}/{1}".format(META.TERRAFORM_TEMPORARY_DIR, tf_vars)
+
+        terraform.do_install(version=terraform_version, verb=self.verb)
+
+        terraform.do_init(source=META.TERRAFORM_MODULE_DIR, module=tf_module, verb=self.verb)
+
+        terraform.do_apply(module=tf_module, var_file=terraform_vars, verb=self.verb)

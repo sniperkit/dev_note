@@ -4,11 +4,12 @@
 from .template import UseTemplate
 from .meta import MetaData
 from .connect import Shell, SshSession
+from .utils import is_empty_string
 
 META = MetaData()
 
 
-def ip_detect(configs, verb):
+def ip_detect(bootstrap_host, verb):
     _ip_detect = UseTemplate(
         template='{0}/{1}.tpl'.format(META.DCOS_TEMPLATE_DIR, META.IP_DETECT),
         verb=verb
@@ -16,62 +17,73 @@ def ip_detect(configs, verb):
     _ip_detect.create_new_file(
         new_file='{0}/{1}'.format(META.DCOS_TEMPORARY_DIR, META.IP_DETECT),
         data_dict={
-            'ROUTE_DESTINATION': configs.get('bootstrap_node').get('address')
+            'ROUTE_DESTINATION': bootstrap_host
         }
     )
 
 
 def _map_tfvars_if_any(configs):
-    dplatform = configs.get('any')
+    dplatform  = configs.get('any')
+    dbootstrap = dplatform.get('bootstrap_node')
+    dmasters   = dplatform.get('master_nodes')
+    dagents    = dplatform.get('agent_nodes')
 
     return {
         'DCOS_CLUSTER_NAME': configs.get('cluster_name'),
         'DCOS_DOWNLOAD_PATH': configs.get('dcos_archive'),
         'DCOS_IP_DETECT_SCRIPT': "{0}/{1}".format(META.DCOS_TEMPORARY_DIR, META.IP_DETECT),
-        'BOOTSTRAP_HOST': dplatform.get('bootstrap_node').get('address'),
-        'BOOTSTRAP_SSH_PORT': dplatform.get('bootstrap_node').get('ports').get('ssh'),
-        'BOOTSTRAP_WEB_PORT': dplatform.get('bootstrap_node').get('ports').get('web'),
-        'BOOTSTRAP_USERNAME': dplatform.get('bootstrap_node').get('username'),
-        'BOOTSTRAP_PASSWORD': dplatform.get('bootstrap_node').get('password'),
-        'MESOS_MASTER_LIST': "\", \"".join(addr for addr in dplatform.get('master_nodes').get('address')),
-        'MESOS_MASTER_COUNT': len(dplatform.get('master_nodes').get('address')),
-        'MESOS_MASTER_USERNAME': dplatform.get('master_nodes').get('username'),
-        'MESOS_MASTER_PASSWORD': dplatform.get('master_nodes').get('password'),
-        'MESOS_AGENT_LIST': "\", \"".join(addr for addr in dplatform.get('agent_nodes').get('address')),
-        'MESOS_AGENT_COUNT': len(dplatform.get('agent_nodes').get('address')),
-        'MESOS_AGENT_USERNAME': dplatform.get('agent_nodes').get('username'),
-        'MESOS_AGENT_PASSWORD': dplatform.get('agent_nodes').get('password')
+        'BOOTSTRAP_HOST': dbootstrap.get('address'),
+        'BOOTSTRAP_SSH_PORT': dbootstrap.get('ports').get('ssh'),
+        'BOOTSTRAP_WEB_PORT': dbootstrap.get('ports').get('web'),
+        'BOOTSTRAP_USERNAME': dbootstrap.get('username'),
+        'BOOTSTRAP_PASSWORD': dbootstrap.get('password'),
+        'MESOS_MASTER_LIST': "\", \"".join(addr for addr in dmasters.get('address')),
+        'MESOS_MASTER_COUNT': len(dmasters.get('address')),
+        'MESOS_MASTER_USERNAME': dmasters.get('username'),
+        'MESOS_MASTER_PASSWORD': dmasters.get('password'),
+        'MESOS_AGENT_LIST': "\", \"".join(addr for addr in dagents.get('address')),
+        'MESOS_AGENT_COUNT': len(dagents.get('address')),
+        'MESOS_AGENT_USERNAME': dagents.get('username'),
+        'MESOS_AGENT_PASSWORD': dagents.get('password')
     }
 
 
 def _map_tfvars_if_aws(configs):
+    dplatform       = configs.get('aws')
+    dbootstrap      = dplatform.get('bootstrap_node')
+    dmasters        = dplatform.get('master_nodes')
+    dagents         = dplatform.get('agent_nodes').get('private')
+    dagents_public  = dplatform.get('agent_nodes').get('public')
+
     return {
-        'MESOS_MASTER_COUNT': "",
-        "MESOS_AGENT_COUNT": "",
-        "MESOS_PUBLIC_AGENT_COUNT": "",
-        'AWS_REGION': "",
-        'AWS_BOOTSTRAP_INSTANCE_TYPE': "",
-        'AWS_BOOTSTRAP_INSTANCE_DISK_SIZE': "",
-        'AWS_MASTER_INSTANCE_TYPE': "",
-        'AWS_MASTER_INSTANCE_DISK_SIZE': "",
-        'AWS_AGENT_INSTANCE_TYPE': "",
-        'AWS_AGENT_INSTANCE_DISK_SIZE': "",
-        'AWS_PUBLIC_AGENT_INSTANCE_TYPE': "",
-        'AWS_PUBLIC_AGENT_INSTANCE_DISK_SIZE': ""
+        'MESOS_MASTER_COUNT': dmasters.get('count'),
+        "MESOS_AGENT_COUNT": dagents.get('count'),
+        "MESOS_PUBLIC_AGENT_COUNT": dagents.get('count'),
+        'AWS_REGION': dplatform.get("region"),
+        'AWS_BOOTSTRAP_INSTANCE_TYPE': dbootstrap.get("instance_type"),
+        'AWS_BOOTSTRAP_INSTANCE_DISK_SIZE': dbootstrap.get("instance_disk_size_gb"),
+        'AWS_MASTER_INSTANCE_TYPE': dmasters.get("instance_type"),
+        'AWS_MASTER_INSTANCE_DISK_SIZE': dmasters.get("instance_disk_size_gb"),
+        'AWS_AGENT_INSTANCE_TYPE': dagents.get("instance_type"),
+        'AWS_AGENT_INSTANCE_DISK_SIZE': dagents.get("instance_disk_size_gb"),
+        'AWS_PUBLIC_AGENT_INSTANCE_TYPE': dagents_public.get("instance_type"),
+        'AWS_PUBLIC_AGENT_INSTANCE_DISK_SIZE': dagents_public.get("instance_disk_size_gb")
     }
 
 
 def terraform_provision(filename, configs, verb):
-    if configs.get("platform") == 'aws':
-        ddata = _map_tfvars_if_any(configs)
+    splatform = 'any' if is_empty_string(configs.get("platform")) else configs.get("platform")
+
+    if splatform == 'aws':
+        ddata = _map_tfvars_if_aws(configs)
     else:
         ddata = _map_tfvars_if_any(configs)
 
     UseTemplate(
-        template="{0}/any_{1}.tpl".format(META.TERRAFORM_TEMPLATE_DIR, filename),
+        template="{}/{}_{}.tpl".format(META.TERRAFORM_TEMPLATE_DIR, splatform, filename),
         verb=verb
     ).create_new_file(
-        new_file="{0}/{1}".format(META.TERRAFORM_TEMPORARY_DIR, filename),
+        new_file="{}/{}_{}".format(META.TERRAFORM_TEMPORARY_DIR, splatform, filename),
         data_dict=ddata
     )
 

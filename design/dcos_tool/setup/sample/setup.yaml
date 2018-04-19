@@ -2,26 +2,28 @@
 terraform:
   version: 0.11.7
 dcos_archive: https://downloads.dcos.io/dcos/stable/1.11.0/dcos_generate_config.sh
-platform: ""
 
-# when platform is set to aws
+# when platform set to aws
 aws:
   region: "us-west-2"
-  bootstrap:
+  bootstrap_node:
     instance_type: "t2.micro"
     instance_disk_size_gb: 20
-  master:
+  master_nodes:
+    count: 1
     instance_type: "t2.micro"
     instance_disk_size_gb: 20
-  agent:
+  agent_nodes:
     private:
+      count: 1
       instance_type: "t2.micro"
       instance_disk_size_gb: 20
     public:
+      count: 1
       instance_type: "t2.micro"
       instance_disk_size_gb: 20
 
-# when platform is not specified
+# when platform set to any
 any:
   bootstrap_node:
     address: 172.27.11.162

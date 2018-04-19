@@ -20,7 +20,8 @@ class MetaData:
     TERRAFORM_VARS = dict(
         dcos_bootstrap='bootstrap.tfvars',
         dcos_master='mesos_master.tfvars',
-        dcos_agent='mesos_agent.tfvars'
+        dcos_agent='mesos_agent.tfvars',
+        terraform_dcos='terraform_dcos.tfvars'
     )
 
     BOOTSTRAP_SCRIPT = '/opt/dcos_bootstrap/dcos_generate_config.sh'

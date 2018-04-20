@@ -15,47 +15,49 @@ META = MetaData()
 
 
 def cli_menu_parser():
-    parser = argparse.ArgumentParser(description='GE tool for environment provision and application deployment')
+    description = 'GE tool for environment provision and application deployment'
 
-    parser.add_argument('-a', '--action',
+    parser = argparse.ArgumentParser(prog='PROG', description=description)
+
+    group_require = parser.add_argument_group('required arguments')
+    group_options = parser.add_argument_group('options')
+
+    parser.add_argument('action',
                         choices=['prepare', 'provision', 'deploy', 'destroy'],
-                        help='run action',
-                        required=True)
-
-    parser.add_argument('-p', '--prepare',
-                        choices=['bootstrap', 'application'],
-                        help='prepare requirements',
-                        required=('-a' or '--action') and 'prepare' in os.sys.argv)
-
-    parser.add_argument('-P', '--platform',
-                        choices=['aws', 'any'],
-                        help='set platform',
-                        required=('-a' or '--action') and
-                                 ('prepare' or 'provision' or 'destroy') in os.sys.argv,
-                        default='any')
-
-    parser.add_argument('-n', '--node',
-                        choices=['bootstrap', 'master', 'agent'],
-                        help='set node purpose',
-                        required=('-a' or '--action') and
-                                 'provision' in os.sys.argv and
-                                 'any' in os.sys.argv)
-
-    parser.add_argument('-c', '--config',
-                        help='give config file path',
-                        required=True)
-
-    parser.add_argument('-v', '--verbosity',
-                        action="count",
-                        help="increase output verbosity",
-                        default=1)
+                        help='stage action')
 
     parser.add_argument('--version',
                         action='version',
                         version='%(prog)s 1.0.0-alpha')
 
+    parser.add_argument('-v',
+                        dest='verb',
+                        action="count",
+                        default=1,
+                        help = "increase verbosity level")
+
+    group_require.add_argument('-c', '--config',
+                               required=True,
+                               help='give config file path')
+
+    group_options.add_argument('-s', '--stage',
+                               choices=['bootstrap', 'application'],
+                               required='prepare' in os.sys.argv,
+                               help='prepare stage')
+
+    group_options.add_argument('-p', '--platform',
+                               choices=['aws', 'any'],
+                               required=('prepare' or 'provision' or 'destroy') in os.sys.argv,
+                               help='set platform')
+
+    group_options.add_argument('-n', '--node',
+                               choices=['bootstrap', 'master', 'agent'],
+                               required='provision' in os.sys.argv and
+                                        'any' in os.sys.argv,
+                               help='set node purpose')
+
     args = parser.parse_args()
-    LogNormal(DEBUG={"message": str(args)}, verb=args.verbosity)
+    LogNormal(DEBUG={"message": str(args)}, verb=args.verb)
 
     return args
 
@@ -66,7 +68,7 @@ def set_configs(args):
 
     configs["platform"] = args.platform
 
-    LogNormal(DEBUG={"message": str(configs)}, verb=args.verbosity)
+    LogNormal(DEBUG={"message": str(configs)}, verb=args.verb)
 
     return configs
 
@@ -77,19 +79,19 @@ if __name__ == "__main__":
 
     configs = set_configs(args)
 
-    if args.action == 'prepare' and args.prepare == 'bootstrap':
-        set_platform = prepare.Platform(configs=configs, verb=args.verbosity)
+    if args.action == 'prepare' and args.stage == 'bootstrap':
+        set_platform = prepare.Platform(configs=configs, verb=args.verb)
 
         if configs.get("platform") == "aws":
             set_platform.aws()
         else:
             set_platform.any()
 
-    if args.action == 'prepare' and args.prepare == 'application':
-        prepare.application(configs=configs, verb=args.verbosity)
+    if args.action == 'prepare' and args.stage == 'application':
+        prepare.application(configs=configs, verb=args.verb)
 
     if args.action == 'provision':
-        set_platform = provision.Platform(configs=configs, verb=args.verbosity)
+        set_platform = provision.Platform(configs=configs, verb=args.verb)
 
         if args.platform == "aws":
             set_platform.aws(
@@ -102,10 +104,10 @@ if __name__ == "__main__":
             )
 
     if args.action == 'deploy':
-        Deploy(configs=configs, verb=args.verbosity).with_marathon()
+        Deploy(configs=configs, verb=args.verb).with_marathon()
 
     if args.action == 'destroy':
-        set_platform = destroy.Platform(configs=configs, verb=args.verbosity)
+        set_platform = destroy.Platform(configs=configs, verb=args.verb)
 
         if args.platform == "aws":
             set_platform.aws(

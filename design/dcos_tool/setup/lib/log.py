@@ -110,7 +110,7 @@ class LogError:
 class LogWarn:
     def __init__(self, verb, **kwargs):
         self.logs = []
-        self.verbosity = verb
+        self.verb = verb
 
         self.info = kwargs.get('INFO', None)
         self.debug = kwargs.get('DEBUG', None)
@@ -119,10 +119,10 @@ class LogWarn:
         self.header = "[WARN]"
         self.state = "warn"
 
-        if int(verb) >= 1:
+        if int(self.verb) >= 1:
             if self._info(): self.logs.append(self._info())
 
-        if int(verb) >= 3:
+        if int(self.verb) >= 3:
             if self._debug(): self.logs.append(self._debug())
 
         for log in self.logs:

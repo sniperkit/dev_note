@@ -138,7 +138,7 @@ def trust_docker_registry(configs, verb):
                 dest_host=host,
                 dest_user=configs.get('agent_nodes').get('username'),
                 dest_password=configs.get('agent_nodes').get('password'),
-                verbosity=verb
+                verb=verb
             )
 
             agent_session = Shell(

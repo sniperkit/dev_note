@@ -36,4 +36,4 @@ class Deploy:
                 _session = Shell(verb=self.verb)
                 _session.local(_cmd, info="deploy marathon application")
             else:
-                LogError(verbosity=self.verb, INFO={"message": "{0} exist".format(_config)})
+                LogError(verb=self.verb, INFO={"message": "{0} exist".format(_config)})

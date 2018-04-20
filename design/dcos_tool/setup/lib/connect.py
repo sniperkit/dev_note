@@ -10,12 +10,12 @@ from .utils import split_lines
 
 
 class SshSession():
-    def __init__(self, dest_host, dest_user, dest_password, verbosity):
+    def __init__(self, dest_host, dest_user, dest_password, verb):
         self.host=str(dest_host)
         self.username=str(dest_user)
         self.password=str(dest_password)
 
-        self.verbosity = verbosity
+        self.verb = verb
 
     def login_with_password(self):
         p_ssh = paramiko.SSHClient()
@@ -23,15 +23,15 @@ class SshSession():
         try:
             p_ssh.connect(hostname=self.host, username=self.username, password=self.password)
             LogNormal(
-                self.verbosity,
+                self.verb,
                 INFO={"message": "create ssh session"},
                 SSH_CONNECT={})
 
             return p_ssh
 
         except (paramiko.ssh_exception.SSHException, paramiko.ssh_exception.NoValidConnectionsError) as e:
-            LogError(self.verbosity, SSH_CONNECT={})
-            LogError(self.verbosity, STDERR={"stderr": e})
+            LogError(self.verb, SSH_CONNECT={})
+            LogError(self.verb, STDERR={"stderr": e})
 
             return None
 

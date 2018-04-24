@@ -18,7 +18,7 @@ function deploy_dcos_master_node {
   sudo sh ./dcos_install.sh master
 }
 
-DCOS_MASTER_HOME="/opt/dcos_master"
+DCOS_MASTER_HOME="/opt/mesos_master"
 DCOS_BOOTSTRAP_HOME="/opt/dcos_bootstrap"
 
 #. ./dcos_bootstrap.sh
@@ -32,7 +32,7 @@ groupadd nogroup
 #if is bootstrap node
 . ./sed.sh
 escaped_str=`escape_forward_slash "docker run -d -p ${BOOTSTRAP_PORT}:80 -v ${DCOS_BOOTSTRAP_HOME}/genconf/serve:/usr/share/nginx/html:ro nginx"`
-add_line_after_match "^systemctl restart docker" "${escaped_str}" "/opt/dcos_master/dcos_install.sh"
+add_line_after_match "^systemctl restart docker" "${escaped_str}" "/opt/mesos_master/dcos_install.sh"
 
 
 #. ./ntp.sh

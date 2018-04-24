@@ -1,6 +1,9 @@
 # https://docs.mesosphere.com/pdf/1.10/deploying-services/marathon-api/1.10-deploying-services-marathon-api.pdf
 # https://mesosphere.github.io/marathon/docs/recipes.html
 # https://mesosphere.github.io/marathon/docs/native-docker.html
+# ping with:
+#   - Mesos-DNS <service-name>.<group-name>.<framework>.mesos, or
+#   - Virtual-IP-Address <service-name>.marathon.l4lb.thisdcos.directory:<port>
 
 . ./curl.sh
 
